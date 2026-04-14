@@ -10,56 +10,70 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("項目") {
-                    HStack {
-                        TextField("新しい項目", text: $newTitle)
-                        Button("追加", action: addItem)
-                            .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            contentForm
+                .navigationTitle("おでかけチェッカーウィジェット")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        EditButton()
                     }
+                    ToolbarItem(placement: .principal) {
+                        Text("おでかけチェッカーウィジェット")
+                            .font(.headline.weight(.semibold))
+                            .scaleEffect(0.6)
+                            .lineLimit(1)
+                    }
+                }
+                .onAppear(perform: reload)
+                .sheet(item: $editingItem) { item in
+                    ItemEditorView(item: item) { updated in
+                        updateItem(updated)
+                    }
+                }
+        }
+    }
 
-                    if items.isEmpty {
-                        Text("項目がありません")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(items) { item in
-                            HStack {
-                                SwitchPreview(isOn: item.isOn)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.title)
-                                    Text(item.autoResetRule?.summary ?? "自動リセットなし")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Button("編集") {
-                                    editingItem = item
-                                }
-                            }
-                        }
-                        .onDelete(perform: deleteItems)
-                        .onMove(perform: moveItems)
-                    }
-                }
-            }
-            .navigationTitle("おでかけチェッカーウィジェット")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                EditButton()
-                ToolbarItem(placement: .principal) {
-                    Text("おでかけチェッカーウィジェット")
-                        .font(.headline.weight(.semibold))
-                        .scaleEffect(0.6)
-                        .lineLimit(1)
-                }
-            }
-            .onAppear(perform: reload)
-            .sheet(item: $editingItem) { item in
-                ItemEditorView(item: item) { updated in
-                    updateItem(updated)
+    private var contentForm: some View {
+        Form {
+            Section("項目") {
+                addItemRow
+
+                if items.isEmpty {
+                    Text("項目がありません")
+                        .foregroundStyle(.secondary)
+                } else {
+                    itemList
                 }
             }
         }
+    }
+
+    private var addItemRow: some View {
+        HStack {
+            TextField("新しい項目", text: $newTitle)
+            Button("追加", action: addItem)
+                .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
+    private var itemList: some View {
+        ForEach(items) { item in
+            HStack {
+                SwitchPreview(isOn: item.isOn)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                    Text(item.autoResetRule?.summary ?? "自動リセットなし")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("編集") {
+                    editingItem = item
+                }
+            }
+        }
+        .onDelete(perform: deleteItems)
+        .onMove(perform: moveItems)
     }
 
     private func reload() {
