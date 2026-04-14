@@ -1,10 +1,12 @@
 import SwiftUI
 import WidgetKit
+import UIKit
 
 struct ContentView: View {
     @State private var items: [ChecklistItem] = []
     @State private var newTitle = ""
     @State private var editingItem: ChecklistItem?
+    @State private var showingQuitConfirmation = false
 
     private let store = ChecklistStore()
 
@@ -45,6 +47,20 @@ struct ContentView: View {
                     itemList
                 }
             }
+
+            Section("アプリ") {
+                Button(role: .destructive) {
+                    showingQuitConfirmation = true
+                } label: {
+                    Text("アプリを終了")
+                }
+            }
+        }
+        .alert("アプリを終了しますか？", isPresented: $showingQuitConfirmation) {
+            Button("終了", role: .destructive, action: quitApp)
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("保存済みの項目は保持されます。")
         }
     }
 
@@ -121,6 +137,12 @@ struct ContentView: View {
     private func normalizeSortOrder(_ list: inout [ChecklistItem]) {
         for index in list.indices {
             list[index].sortOrder = index
+        }
+    }
+
+    private func quitApp() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            exit(0)
         }
     }
 }
