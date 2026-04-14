@@ -10,7 +10,9 @@ struct ChecklistStore {
     private let decoder = JSONDecoder()
 
     init() {
-        self.defaults = UserDefaults(suiteName: AppConfig.appGroupID) ?? .standard
+        let sharedDefaults = UserDefaults(suiteName: AppConfig.appGroupID)
+        self.defaults = sharedDefaults ?? .standard
+        migrateLegacyStorageIfNeeded(sharedDefaults: sharedDefaults)
     }
 
     func loadItems() -> [ChecklistItem] {
@@ -87,6 +89,33 @@ struct ChecklistStore {
         return items
     }
 
+
+    private func migrateLegacyStorageIfNeeded(sharedDefaults: UserDefaults?) {
+        guard let sharedDefaults else { return }
+        guard sharedDefaults.data(forKey: AppConfig.itemsKey) == nil else { return }
+
+        let legacyCandidates: [UserDefaults] = [
+            .standard,
+            UserDefaults(suiteName: AppConfig.legacyUnsharedSuiteID)
+        ].compactMap { $0 }
+
+        for source in legacyCandidates {
+            guard let data = source.data(forKey: AppConfig.itemsKey) else { continue }
+            sharedDefaults.set(data, forKey: AppConfig.itemsKey)
+
+            if let resetRuleData = source.data(forKey: AppConfig.resetRuleKey) {
+                sharedDefaults.set(resetRuleData, forKey: AppConfig.resetRuleKey)
+            }
+            if let resetStateData = source.data(forKey: AppConfig.resetStateKey) {
+                sharedDefaults.set(resetStateData, forKey: AppConfig.resetStateKey)
+            }
+            if source.object(forKey: AppConfig.perItemResetMigrationCompletedKey) != nil {
+                sharedDefaults.set(source.bool(forKey: AppConfig.perItemResetMigrationCompletedKey),
+                                   forKey: AppConfig.perItemResetMigrationCompletedKey)
+            }
+            break
+        }
+    }
     private func migrateLegacyGlobalResetIfNeeded(items: inout [ChecklistItem]) -> Bool {
         guard !defaults.bool(forKey: AppConfig.perItemResetMigrationCompletedKey) else {
             return false

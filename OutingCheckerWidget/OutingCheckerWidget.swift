@@ -64,60 +64,30 @@ private struct OutingWidgetListView: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        let maxCount = maxItems(for: family)
+        let maxCount = WidgetLayout.maxItemsForSingleColumn(family)
         let visibleItems = Array(entry.items.prefix(maxCount))
 
-        VStack(alignment: .leading, spacing: spacing(for: family)) {
-            ForEach(visibleItems) { item in
-                WidgetItemButton(item: item, compact: family == .systemSmall, font: font(for: family))
-            }
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
+                ForEach(visibleItems) { item in
+                    WidgetItemButton(
+                        item: item,
+                        compact: false,
+                        font: WidgetLayout.font(family)
+                    )
+                }
 
-            if visibleItems.isEmpty {
-                Text("項目がありません")
-                    .font(font(for: family))
-                    .foregroundStyle(.secondary)
+                if visibleItems.isEmpty {
+                    Text("項目がありません")
+                        .font(WidgetLayout.font(family))
+                        .foregroundStyle(.secondary)
+                }
             }
-
             Spacer(minLength: 0)
         }
-        .padding(padding(for: family))
+        .padding(WidgetLayout.padding(family))
         .containerBackground(.background, for: .widget)
-    }
-
-    private func maxItems(for family: WidgetFamily) -> Int {
-        switch family {
-        case .systemSmall: return 2
-        case .systemMedium: return 5
-        case .systemLarge: return 10
-        default: return 5
-        }
-    }
-
-    private func spacing(for family: WidgetFamily) -> CGFloat {
-        switch family {
-        case .systemSmall: return 8
-        case .systemMedium: return 10
-        case .systemLarge: return 12
-        default: return 10
-        }
-    }
-
-    private func padding(for family: WidgetFamily) -> CGFloat {
-        switch family {
-        case .systemSmall: return 12
-        case .systemMedium: return 14
-        case .systemLarge: return 16
-        default: return 14
-        }
-    }
-
-    private func font(for family: WidgetFamily) -> Font {
-        switch family {
-        case .systemSmall: return .caption
-        case .systemMedium: return .body
-        case .systemLarge: return .body
-        default: return .body
-        }
     }
 }
 
@@ -130,24 +100,27 @@ private struct OutingWidgetTwoColumnView: View {
     }
 
     var body: some View {
-        let maxCount = family == .systemLarge ? 12 : 8
+        let maxCount = WidgetLayout.maxItemsForTwoColumn(family)
         let visibleItems = Array(entry.items.prefix(maxCount))
 
-        VStack(alignment: .leading, spacing: 8) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                ForEach(visibleItems) { item in
-                    WidgetItemButton(item: item, compact: true, font: .caption)
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
+                    ForEach(visibleItems) { item in
+                        WidgetItemButton(item: item, compact: false, font: WidgetLayout.font(family))
+                    }
                 }
-            }
 
-            if visibleItems.isEmpty {
-                Text("項目がありません")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if visibleItems.isEmpty {
+                    Text("項目がありません")
+                        .font(WidgetLayout.font(family))
+                        .foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 0)
         }
-        .padding(family == .systemLarge ? 14 : 12)
+        .padding(WidgetLayout.padding(family))
         .containerBackground(.background, for: .widget)
     }
 }
@@ -165,6 +138,8 @@ private struct WidgetItemButton: View {
                     .font(font)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .allowsTightening(true)
                 Spacer(minLength: 0)
             }
         }
@@ -181,6 +156,10 @@ private struct WidgetSwitchView: View {
             RoundedRectangle(cornerRadius: compact ? 12 : 14)
                 .fill(isOn ? Color.green.opacity(0.9) : Color.gray.opacity(0.45))
                 .frame(width: compact ? 40 : 50, height: compact ? 22 : 28)
+            Text(isOn ? "済" : "未")
+                .font(compact ? .caption2.bold() : .caption.weight(.bold))
+                .foregroundStyle(.white)
+                .offset(x: isOn ? (compact ? -7 : -9) : (compact ? 7 : 9))
             Circle()
                 .fill(Color.white)
                 .frame(width: compact ? 18 : 22, height: compact ? 18 : 22)
@@ -188,5 +167,51 @@ private struct WidgetSwitchView: View {
                 .shadow(radius: 1)
         }
         .accessibilityLabel(isOn ? "オン" : "オフ")
+    }
+}
+
+private enum WidgetLayout {
+    static func maxItemsForSingleColumn(_ family: WidgetFamily) -> Int {
+        switch family {
+        case .systemSmall: return 4
+        case .systemMedium: return 4
+        case .systemLarge: return 8
+        default: return 4
+        }
+    }
+
+    static func maxItemsForTwoColumn(_ family: WidgetFamily) -> Int {
+        switch family {
+        case .systemMedium: return 8
+        case .systemLarge: return 16
+        default: return 8
+        }
+    }
+
+    static func rowSpacing(_ family: WidgetFamily) -> CGFloat {
+        switch family {
+        case .systemSmall: return 8
+        case .systemMedium: return 10
+        case .systemLarge: return 12
+        default: return 10
+        }
+    }
+
+    static func padding(_ family: WidgetFamily) -> CGFloat {
+        switch family {
+        case .systemSmall: return 12
+        case .systemMedium: return 14
+        case .systemLarge: return 16
+        default: return 14
+        }
+    }
+
+    static func font(_ family: WidgetFamily) -> Font {
+        switch family {
+        case .systemSmall: return .body
+        case .systemMedium: return .body
+        case .systemLarge: return .body
+        default: return .body
+        }
     }
 }

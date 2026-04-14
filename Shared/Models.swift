@@ -47,7 +47,9 @@ struct ChecklistItem: Identifiable, Codable, Hashable {
 enum ResetRule: Codable, Hashable {
     case daily(hour: Int, minute: Int)
     case weekday(weekday: Int, hour: Int, minute: Int)
+    case weekdays(weekdays: [Int], hour: Int, minute: Int)
     case nthWeekday(ordinal: Int, weekday: Int, hour: Int, minute: Int)
+    case nthWeekdays(ordinals: [Int], weekdays: [Int], hour: Int, minute: Int)
 
     var summary: String {
         switch self {
@@ -55,8 +57,12 @@ enum ResetRule: Codable, Hashable {
             return String(format: "毎日 %02d:%02d", hour, minute)
         case let .weekday(weekday, hour, minute):
             return "毎週 \(weekdayJapanese(weekday)) \(String(format: "%02d:%02d", hour, minute))"
+        case let .weekdays(weekdays, hour, minute):
+            return "毎週 \(weekdayJapaneseList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
         case let .nthWeekday(ordinal, weekday, hour, minute):
             return "毎月第\(ordinal)\(weekdayJapanese(weekday)) \(String(format: "%02d:%02d", hour, minute))"
+        case let .nthWeekdays(ordinals, weekdays, hour, minute):
+            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
         }
     }
 
@@ -71,5 +77,15 @@ enum ResetRule: Codable, Hashable {
         case 7: return "土曜"
         default: return "?"
         }
+    }
+
+    private func weekdayJapaneseList(_ values: [Int]) -> String {
+        let normalized = Array(Set(values)).sorted().map(weekdayJapanese)
+        return normalized.isEmpty ? "未選択" : normalized.joined(separator: "・")
+    }
+
+    private func ordinalJapaneseList(_ values: [Int]) -> String {
+        let normalized = Array(Set(values)).sorted().map { "第\($0)" }
+        return normalized.isEmpty ? "未選択" : normalized.joined(separator: "・")
     }
 }

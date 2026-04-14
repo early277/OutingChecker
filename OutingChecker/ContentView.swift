@@ -1,7 +1,9 @@
 import SwiftUI
 import WidgetKit
+import UIKit
 
 struct ContentView: View {
+    @State private var editMode: EditMode = .inactive
     @State private var items: [ChecklistItem] = []
     @State private var newTitle = ""
     @State private var editingItem: ChecklistItem?
@@ -10,56 +12,83 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("項目") {
-                    HStack {
-                        TextField("新しい項目", text: $newTitle)
-                        Button("追加", action: addItem)
-                            .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-
-                    if items.isEmpty {
-                        Text("項目がありません")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(items) { item in
-                            HStack {
-                                SwitchPreview(isOn: item.isOn)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.title)
-                                    Text(item.autoResetRule?.summary ?? "自動リセットなし")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Button("編集") {
-                                    editingItem = item
-                                }
+            contentForm
+                .navigationTitle("おでかけチェッカーウィジェット")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(isEditing ? "完了" : "編集") {
+                            withAnimation {
+                                editMode = isEditing ? .inactive : .active
                             }
                         }
-                        .onDelete(perform: deleteItems)
-                        .onMove(perform: moveItems)
+                    }
+                    ToolbarItem(placement: .principal) {
+                        Text("おでかけチェッカーウィジェット")
+                            .font(.headline.weight(.semibold))
+                            .scaleEffect(0.6)
+                            .lineLimit(1)
                     }
                 }
-            }
-            .navigationTitle("おでかけチェッカーウィジェット")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                EditButton()
-                ToolbarItem(placement: .principal) {
-                    Text("おでかけチェッカーウィジェット")
-                        .font(.headline.weight(.semibold))
-                        .scaleEffect(0.6)
-                        .lineLimit(1)
+                .onAppear(perform: reload)
+                .environment(\.editMode, $editMode)
+                .sheet(item: $editingItem) { item in
+                    ItemEditorView(item: item) { updated in
+                        updateItem(updated)
+                    }
+                }
+        }
+    }
+
+    private var contentForm: some View {
+        Form {
+            Section("項目") {
+                addItemRow
+
+                if items.isEmpty {
+                    Text("項目がありません")
+                        .foregroundStyle(.secondary)
+                } else {
+                    itemList
                 }
             }
-            .onAppear(perform: reload)
-            .sheet(item: $editingItem) { item in
-                ItemEditorView(item: item) { updated in
-                    updateItem(updated)
+
+            Section("アプリ") {
+                Button(role: .destructive) {
+                    quitApp()
+                } label: {
+                    Text("アプリを終了")
                 }
             }
         }
+    }
+
+    private var addItemRow: some View {
+        HStack {
+            TextField("新しい項目", text: $newTitle)
+            Button("追加", action: addItem)
+                .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
+    private var itemList: some View {
+        ForEach(items) { item in
+            HStack {
+                SwitchPreview(isOn: item.isOn)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                    Text(item.autoResetRule?.summary ?? "自動リセットなし")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("編集") {
+                    editingItem = item
+                }
+            }
+        }
+        .onDelete(perform: deleteItems)
+        .onMove(perform: moveItems)
     }
 
     private func reload() {
@@ -109,6 +138,16 @@ struct ContentView: View {
             list[index].sortOrder = index
         }
     }
+
+    private var isEditing: Bool {
+        editMode.isEditing
+    }
+
+    private func quitApp() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            exit(0)
+        }
+    }
 }
 
 private struct ItemEditorView: View {
@@ -126,8 +165,8 @@ private struct ItemEditorView: View {
 
     @State private var autoResetEnabled: Bool
     @State private var selectedRuleMode: RuleMode
-    @State private var selectedWeekday: Int
-    @State private var selectedOrdinal: Int
+    @State private var selectedWeekdays: Set<Int>
+    @State private var selectedOrdinals: Set<Int>
     @State private var time: Date
 
     init(item: ChecklistItem, onSave: @escaping (ChecklistItem) -> Void) {
@@ -141,18 +180,28 @@ private struct ItemEditorView: View {
         switch initialRule {
         case let .daily(hour, minute):
             _selectedRuleMode = State(initialValue: .daily)
-            _selectedWeekday = State(initialValue: 2)
-            _selectedOrdinal = State(initialValue: 1)
+            _selectedWeekdays = State(initialValue: [2])
+            _selectedOrdinals = State(initialValue: [1])
             _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         case let .weekday(weekday, hour, minute):
             _selectedRuleMode = State(initialValue: .weekday)
-            _selectedWeekday = State(initialValue: weekday)
-            _selectedOrdinal = State(initialValue: 1)
+            _selectedWeekdays = State(initialValue: [weekday])
+            _selectedOrdinals = State(initialValue: [1])
+            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
+        case let .weekdays(weekdays, hour, minute):
+            _selectedRuleMode = State(initialValue: .weekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: [1])
             _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         case let .nthWeekday(ordinal, weekday, hour, minute):
             _selectedRuleMode = State(initialValue: .nthWeekday)
-            _selectedWeekday = State(initialValue: weekday)
-            _selectedOrdinal = State(initialValue: ordinal)
+            _selectedWeekdays = State(initialValue: [weekday])
+            _selectedOrdinals = State(initialValue: [ordinal])
+            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
+        case let .nthWeekdays(ordinals, weekdays, hour, minute):
+            _selectedRuleMode = State(initialValue: .nthWeekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: Set(ordinals))
             _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         }
     }
@@ -176,21 +225,33 @@ private struct ItemEditorView: View {
                         .pickerStyle(.segmented)
 
                         if selectedRuleMode == .weekday || selectedRuleMode == .nthWeekday {
-                            Picker("曜日", selection: $selectedWeekday) {
-                                Text("日曜").tag(1)
-                                Text("月曜").tag(2)
-                                Text("火曜").tag(3)
-                                Text("水曜").tag(4)
-                                Text("木曜").tag(5)
-                                Text("金曜").tag(6)
-                                Text("土曜").tag(7)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("曜日（複数選択）")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                ForEach(weekdayOptions, id: \.value) { option in
+                                    MultiSelectRow(
+                                        title: option.title,
+                                        isSelected: selectedWeekdays.contains(option.value)
+                                    ) {
+                                        toggleSelection(option.value, in: &selectedWeekdays)
+                                    }
+                                }
                             }
                         }
 
                         if selectedRuleMode == .nthWeekday {
-                            Picker("第何", selection: $selectedOrdinal) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("第何（複数選択）")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                                 ForEach(1...5, id: \.self) { value in
-                                    Text("第\(value)").tag(value)
+                                    MultiSelectRow(
+                                        title: "第\(value)",
+                                        isSelected: selectedOrdinals.contains(value)
+                                    ) {
+                                        toggleSelection(value, in: &selectedOrdinals)
+                                    }
                                 }
                             }
                         }
@@ -226,15 +287,63 @@ private struct ItemEditorView: View {
             case .daily:
                 draft.autoResetRule = .daily(hour: hour, minute: minute)
             case .weekday:
-                draft.autoResetRule = .weekday(weekday: selectedWeekday, hour: hour, minute: minute)
+                let weekdays = selectedWeekdays.isEmpty ? [2] : Array(selectedWeekdays).sorted()
+                if weekdays.count == 1, let weekday = weekdays.first {
+                    draft.autoResetRule = .weekday(weekday: weekday, hour: hour, minute: minute)
+                } else {
+                    draft.autoResetRule = .weekdays(weekdays: weekdays, hour: hour, minute: minute)
+                }
             case .nthWeekday:
-                draft.autoResetRule = .nthWeekday(ordinal: selectedOrdinal, weekday: selectedWeekday, hour: hour, minute: minute)
+                let ordinals = selectedOrdinals.isEmpty ? [1] : Array(selectedOrdinals).sorted()
+                let weekdays = selectedWeekdays.isEmpty ? [2] : Array(selectedWeekdays).sorted()
+                if ordinals.count == 1,
+                   weekdays.count == 1,
+                   let ordinal = ordinals.first,
+                   let weekday = weekdays.first {
+                    draft.autoResetRule = .nthWeekday(ordinal: ordinal, weekday: weekday, hour: hour, minute: minute)
+                } else {
+                    draft.autoResetRule = .nthWeekdays(ordinals: ordinals, weekdays: weekdays, hour: hour, minute: minute)
+                }
             }
         } else {
             draft.autoResetRule = nil
             draft.lastAutoResetTriggerDate = nil
         }
         onSave(draft)
+    }
+
+    private var weekdayOptions: [(value: Int, title: String)] {
+        [
+            (1, "日曜"), (2, "月曜"), (3, "火曜"), (4, "水曜"),
+            (5, "木曜"), (6, "金曜"), (7, "土曜")
+        ]
+    }
+
+    private func toggleSelection(_ value: Int, in set: inout Set<Int>) {
+        if set.contains(value) {
+            set.remove(value)
+        } else {
+            set.insert(value)
+        }
+    }
+}
+
+private struct MultiSelectRow: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -246,6 +355,10 @@ private struct SwitchPreview: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(isOn ? Color.green.opacity(0.85) : Color.gray.opacity(0.5))
                 .frame(width: 52, height: 30)
+            Text(isOn ? "済" : "未")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .offset(x: isOn ? -9 : 9)
             Circle()
                 .fill(Color.white)
                 .frame(width: 24, height: 24)
