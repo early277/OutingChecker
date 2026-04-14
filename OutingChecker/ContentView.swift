@@ -3,6 +3,7 @@ import WidgetKit
 import UIKit
 
 struct ContentView: View {
+    @Environment(\.editMode) private var editMode
     @State private var items: [ChecklistItem] = []
     @State private var newTitle = ""
     @State private var editingItem: ChecklistItem?
@@ -16,7 +17,11 @@ struct ContentView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        EditButton()
+                        Button(isEditing ? "完了" : "編集") {
+                            withAnimation {
+                                editMode?.wrappedValue = isEditing ? .inactive : .active
+                            }
+                        }
                     }
                     ToolbarItem(placement: .principal) {
                         Text("おでかけチェッカーウィジェット")
@@ -131,6 +136,10 @@ struct ContentView: View {
         for index in list.indices {
             list[index].sortOrder = index
         }
+    }
+
+    private var isEditing: Bool {
+        editMode?.wrappedValue.isEditing == true
     }
 
     private func quitApp() {
