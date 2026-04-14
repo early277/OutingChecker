@@ -165,8 +165,8 @@ private struct ItemEditorView: View {
 
     @State private var autoResetEnabled: Bool
     @State private var selectedRuleMode: RuleMode
-    @State private var selectedWeekday: Int
-    @State private var selectedOrdinal: Int
+    @State private var selectedWeekdays: Set<Int>
+    @State private var selectedOrdinals: Set<Int>
     @State private var time: Date
 
     init(item: ChecklistItem, onSave: @escaping (ChecklistItem) -> Void) {
@@ -180,18 +180,28 @@ private struct ItemEditorView: View {
         switch initialRule {
         case let .daily(hour, minute):
             _selectedRuleMode = State(initialValue: .daily)
-            _selectedWeekday = State(initialValue: 2)
-            _selectedOrdinal = State(initialValue: 1)
+            _selectedWeekdays = State(initialValue: [2])
+            _selectedOrdinals = State(initialValue: [1])
             _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         case let .weekday(weekday, hour, minute):
             _selectedRuleMode = State(initialValue: .weekday)
-            _selectedWeekday = State(initialValue: weekday)
-            _selectedOrdinal = State(initialValue: 1)
+            _selectedWeekdays = State(initialValue: [weekday])
+            _selectedOrdinals = State(initialValue: [1])
+            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
+        case let .weekdays(weekdays, hour, minute):
+            _selectedRuleMode = State(initialValue: .weekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: [1])
             _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         case let .nthWeekday(ordinal, weekday, hour, minute):
             _selectedRuleMode = State(initialValue: .nthWeekday)
-            _selectedWeekday = State(initialValue: weekday)
-            _selectedOrdinal = State(initialValue: ordinal)
+            _selectedWeekdays = State(initialValue: [weekday])
+            _selectedOrdinals = State(initialValue: [ordinal])
+            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
+        case let .nthWeekdays(ordinals, weekdays, hour, minute):
+            _selectedRuleMode = State(initialValue: .nthWeekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: Set(ordinals))
             _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         }
     }
@@ -215,21 +225,33 @@ private struct ItemEditorView: View {
                         .pickerStyle(.segmented)
 
                         if selectedRuleMode == .weekday || selectedRuleMode == .nthWeekday {
-                            Picker("曜日", selection: $selectedWeekday) {
-                                Text("日曜").tag(1)
-                                Text("月曜").tag(2)
-                                Text("火曜").tag(3)
-                                Text("水曜").tag(4)
-                                Text("木曜").tag(5)
-                                Text("金曜").tag(6)
-                                Text("土曜").tag(7)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("曜日（複数選択）")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                ForEach(weekdayOptions, id: \.value) { option in
+                                    MultiSelectRow(
+                                        title: option.title,
+                                        isSelected: selectedWeekdays.contains(option.value)
+                                    ) {
+                                        toggleSelection(option.value, in: &selectedWeekdays)
+                                    }
+                                }
                             }
                         }
 
                         if selectedRuleMode == .nthWeekday {
-                            Picker("第何", selection: $selectedOrdinal) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("第何（複数選択）")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                                 ForEach(1...5, id: \.self) { value in
-                                    Text("第\(value)").tag(value)
+                                    MultiSelectRow(
+                                        title: "第\(value)",
+                                        isSelected: selectedOrdinals.contains(value)
+                                    ) {
+                                        toggleSelection(value, in: &selectedOrdinals)
+                                    }
                                 }
                             }
                         }
@@ -265,15 +287,63 @@ private struct ItemEditorView: View {
             case .daily:
                 draft.autoResetRule = .daily(hour: hour, minute: minute)
             case .weekday:
-                draft.autoResetRule = .weekday(weekday: selectedWeekday, hour: hour, minute: minute)
+                let weekdays = selectedWeekdays.isEmpty ? [2] : Array(selectedWeekdays).sorted()
+                if weekdays.count == 1, let weekday = weekdays.first {
+                    draft.autoResetRule = .weekday(weekday: weekday, hour: hour, minute: minute)
+                } else {
+                    draft.autoResetRule = .weekdays(weekdays: weekdays, hour: hour, minute: minute)
+                }
             case .nthWeekday:
-                draft.autoResetRule = .nthWeekday(ordinal: selectedOrdinal, weekday: selectedWeekday, hour: hour, minute: minute)
+                let ordinals = selectedOrdinals.isEmpty ? [1] : Array(selectedOrdinals).sorted()
+                let weekdays = selectedWeekdays.isEmpty ? [2] : Array(selectedWeekdays).sorted()
+                if ordinals.count == 1,
+                   weekdays.count == 1,
+                   let ordinal = ordinals.first,
+                   let weekday = weekdays.first {
+                    draft.autoResetRule = .nthWeekday(ordinal: ordinal, weekday: weekday, hour: hour, minute: minute)
+                } else {
+                    draft.autoResetRule = .nthWeekdays(ordinals: ordinals, weekdays: weekdays, hour: hour, minute: minute)
+                }
             }
         } else {
             draft.autoResetRule = nil
             draft.lastAutoResetTriggerDate = nil
         }
         onSave(draft)
+    }
+
+    private var weekdayOptions: [(value: Int, title: String)] {
+        [
+            (1, "日曜"), (2, "月曜"), (3, "火曜"), (4, "水曜"),
+            (5, "木曜"), (6, "金曜"), (7, "土曜")
+        ]
+    }
+
+    private func toggleSelection(_ value: Int, in set: inout Set<Int>) {
+        if set.contains(value) {
+            set.remove(value)
+        } else {
+            set.insert(value)
+        }
+    }
+}
+
+private struct MultiSelectRow: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

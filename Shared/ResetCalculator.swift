@@ -7,8 +7,22 @@ enum ResetCalculator {
             return latestDailyTrigger(beforeOrAt: now, hour: hour, minute: minute, calendar: calendar)
         case let .weekday(weekday, hour, minute):
             return latestWeekdayTrigger(beforeOrAt: now, weekday: weekday, hour: hour, minute: minute, calendar: calendar)
+        case let .weekdays(weekdays, hour, minute):
+            return weekdays
+                .compactMap { latestWeekdayTrigger(beforeOrAt: now, weekday: $0, hour: hour, minute: minute, calendar: calendar) }
+                .max()
         case let .nthWeekday(ordinal, weekday, hour, minute):
             return latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, calendar: calendar)
+        case let .nthWeekdays(ordinals, weekdays, hour, minute):
+            var candidates: [Date] = []
+            for ordinal in ordinals {
+                for weekday in weekdays {
+                    if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, calendar: calendar) {
+                        candidates.append(candidate)
+                    }
+                }
+            }
+            return candidates.max()
         }
     }
 
