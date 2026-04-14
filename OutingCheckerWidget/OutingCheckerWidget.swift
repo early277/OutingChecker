@@ -67,21 +67,23 @@ private struct OutingWidgetListView: View {
         let maxCount = WidgetLayout.maxItemsForSingleColumn(family)
         let visibleItems = Array(entry.items.prefix(maxCount))
 
-        VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
-            ForEach(visibleItems) { item in
-                WidgetItemButton(
-                    item: item,
-                    compact: family == .systemSmall,
-                    font: WidgetLayout.font(family)
-                )
-            }
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
+                ForEach(visibleItems) { item in
+                    WidgetItemButton(
+                        item: item,
+                        compact: false,
+                        font: WidgetLayout.font(family)
+                    )
+                }
 
-            if visibleItems.isEmpty {
-                Text("項目がありません")
-                    .font(WidgetLayout.font(family))
-                    .foregroundStyle(.secondary)
+                if visibleItems.isEmpty {
+                    Text("項目がありません")
+                        .font(WidgetLayout.font(family))
+                        .foregroundStyle(.secondary)
+                }
             }
-
             Spacer(minLength: 0)
         }
         .padding(WidgetLayout.padding(family))
@@ -101,17 +103,20 @@ private struct OutingWidgetTwoColumnView: View {
         let maxCount = WidgetLayout.maxItemsForTwoColumn(family)
         let visibleItems = Array(entry.items.prefix(maxCount))
 
-        VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
-                ForEach(visibleItems) { item in
-                    WidgetItemButton(item: item, compact: false, font: WidgetLayout.font(family))
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
+                    ForEach(visibleItems) { item in
+                        WidgetItemButton(item: item, compact: false, font: WidgetLayout.font(family))
+                    }
                 }
-            }
 
-            if visibleItems.isEmpty {
-                Text("項目がありません")
-                    .font(WidgetLayout.font(family))
-                    .foregroundStyle(.secondary)
+                if visibleItems.isEmpty {
+                    Text("項目がありません")
+                        .font(WidgetLayout.font(family))
+                        .foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -164,18 +169,18 @@ private struct WidgetSwitchView: View {
 private enum WidgetLayout {
     static func maxItemsForSingleColumn(_ family: WidgetFamily) -> Int {
         switch family {
-        case .systemSmall: return 2
+        case .systemSmall: return 4
         case .systemMedium: return 4
-        case .systemLarge: return 7
+        case .systemLarge: return 8
         default: return 4
         }
     }
 
     static func maxItemsForTwoColumn(_ family: WidgetFamily) -> Int {
         switch family {
-        case .systemMedium: return 6
-        case .systemLarge: return 10
-        default: return 6
+        case .systemMedium: return 8
+        case .systemLarge: return 16
+        default: return 8
         }
     }
 
