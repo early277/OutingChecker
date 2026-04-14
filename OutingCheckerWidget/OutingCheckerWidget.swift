@@ -87,9 +87,9 @@ private struct OutingWidgetListView: View {
     private func maxItems(for family: WidgetFamily) -> Int {
         switch family {
         case .systemSmall: return 2
-        case .systemMedium: return 5
-        case .systemLarge: return 10
-        default: return 5
+        case .systemMedium: return 8
+        case .systemLarge: return 16
+        default: return 8
         }
     }
 
@@ -130,7 +130,7 @@ private struct OutingWidgetTwoColumnView: View {
     }
 
     var body: some View {
-        let maxCount = family == .systemLarge ? 12 : 8
+        let maxCount = family == .systemLarge ? 20 : 10
         let visibleItems = Array(entry.items.prefix(maxCount))
 
         VStack(alignment: .leading, spacing: 8) {
