@@ -27,34 +27,6 @@ struct ChecklistStore {
         }
     }
 
-    func loadRule() -> ResetRule {
-        guard let data = defaults.data(forKey: AppConfig.resetRuleKey),
-              let rule = try? decoder.decode(ResetRule.self, from: data) else {
-            return .daily(hour: 5, minute: 0)
-        }
-        return rule
-    }
-
-    func saveRule(_ rule: ResetRule) {
-        if let data = try? encoder.encode(rule) {
-            defaults.set(data, forKey: AppConfig.resetRuleKey)
-        }
-    }
-
-    func loadResetState() -> ResetState {
-        guard let data = defaults.data(forKey: AppConfig.resetStateKey),
-              let state = try? decoder.decode(ResetState.self, from: data) else {
-            return ResetState(lastResetTriggerDate: nil)
-        }
-        return state
-    }
-
-    func saveResetState(_ state: ResetState) {
-        if let data = try? encoder.encode(state) {
-            defaults.set(data, forKey: AppConfig.resetStateKey)
-        }
-    }
-
     @discardableResult
     func toggleItem(id: UUID, now: Date = Date()) -> [ChecklistItem] {
         var items = loadItems()
@@ -72,30 +44,32 @@ struct ChecklistStore {
 
     @discardableResult
     func applyResetIfNeeded(now: Date = Date(), items: inout [ChecklistItem]) -> Bool {
-        let rule = loadRule()
-        var state = loadResetState()
         let calendar = Calendar.current
+        var changed = false
 
-        guard let trigger = ResetCalculator.latestTriggerDate(beforeOrAt: now, rule: rule, calendar: calendar) else {
-            return false
-        }
-
-        if let last = state.lastResetTriggerDate,
-           calendar.compare(last, to: trigger, toGranularity: .minute) != .orderedAscending {
-            return false
-        }
-
-        let hasAnyOn = items.contains(where: { $0.isOn })
-        if hasAnyOn {
-            for index in items.indices {
-                items[index].isOn = false
+        for index in items.indices {
+            guard let rule = items[index].autoResetRule,
+                  let trigger = ResetCalculator.latestTriggerDate(beforeOrAt: now, rule: rule, calendar: calendar) else {
+                continue
             }
+
+            if let last = items[index].lastAutoResetTriggerDate,
+               calendar.compare(last, to: trigger, toGranularity: .minute) != .orderedAscending {
+                continue
+            }
+
+            if items[index].isOn {
+                items[index].isOn = false
+                changed = true
+            }
+            items[index].lastAutoResetTriggerDate = trigger
+            changed = true
+        }
+
+        if changed {
             saveItems(items)
         }
-
-        state.lastResetTriggerDate = trigger
-        saveResetState(state)
-        return true
+        return changed
     }
 
     func currentItemsApplyingResetIfNeeded(now: Date = Date()) -> [ChecklistItem] {

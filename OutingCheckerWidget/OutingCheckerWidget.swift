@@ -14,7 +14,8 @@ struct OutingProvider: TimelineProvider {
         OutingEntry(date: Date(), items: [
             ChecklistItem(title: "財布", isOn: true, sortOrder: 0),
             ChecklistItem(title: "鍵", isOn: false, sortOrder: 1),
-            ChecklistItem(title: "スマホ", isOn: true, sortOrder: 2)
+            ChecklistItem(title: "スマホ", isOn: true, sortOrder: 2),
+            ChecklistItem(title: "ハンカチ", isOn: false, sortOrder: 3)
         ])
     }
 
@@ -37,7 +38,7 @@ struct OutingCheckerWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
-            OutingWidgetView(entry: entry)
+            OutingWidgetListView(entry: entry)
         }
         .configurationDisplayName("お出かけチェッカー")
         .description("ウィジェット上で直接 ON/OFF を切り替えます。")
@@ -45,7 +46,20 @@ struct OutingCheckerWidget: Widget {
     }
 }
 
-private struct OutingWidgetView: View {
+struct OutingCheckerTwoColumnWidget: Widget {
+    let kind = "OutingCheckerTwoColumnWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            OutingWidgetTwoColumnView(entry: entry)
+        }
+        .configurationDisplayName("お出かけチェッカー (2列)")
+        .description("2列レイアウトで項目を表示します。")
+        .supportedFamilies([.systemMedium, .systemLarge])
+    }
+}
+
+private struct OutingWidgetListView: View {
     let entry: OutingEntry
     @Environment(\.widgetFamily) private var family
 
@@ -55,17 +69,7 @@ private struct OutingWidgetView: View {
 
         VStack(alignment: .leading, spacing: spacing(for: family)) {
             ForEach(visibleItems) { item in
-                Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
-                    HStack(spacing: 10) {
-                        WidgetSwitchView(isOn: item.isOn, compact: family == .systemSmall)
-                        Text(item.title)
-                            .font(font(for: family))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                    }
-                }
-                .buttonStyle(.plain)
+                WidgetItemButton(item: item, compact: family == .systemSmall, font: font(for: family))
             }
 
             if visibleItems.isEmpty {
@@ -114,6 +118,57 @@ private struct OutingWidgetView: View {
         case .systemLarge: return .body
         default: return .body
         }
+    }
+}
+
+private struct OutingWidgetTwoColumnView: View {
+    let entry: OutingEntry
+    @Environment(\.widgetFamily) private var family
+
+    private var columns: [GridItem] {
+        [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+    }
+
+    var body: some View {
+        let maxCount = family == .systemLarge ? 12 : 8
+        let visibleItems = Array(entry.items.prefix(maxCount))
+
+        VStack(alignment: .leading, spacing: 8) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                ForEach(visibleItems) { item in
+                    WidgetItemButton(item: item, compact: true, font: .caption)
+                }
+            }
+
+            if visibleItems.isEmpty {
+                Text("項目がありません")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(family == .systemLarge ? 14 : 12)
+        .containerBackground(.background, for: .widget)
+    }
+}
+
+private struct WidgetItemButton: View {
+    let item: ChecklistItem
+    let compact: Bool
+    let font: Font
+
+    var body: some View {
+        Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
+            HStack(spacing: 8) {
+                WidgetSwitchView(isOn: item.isOn, compact: compact)
+                Text(item.title)
+                    .font(font)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

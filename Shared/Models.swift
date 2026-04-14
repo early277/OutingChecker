@@ -5,12 +5,42 @@ struct ChecklistItem: Identifiable, Codable, Hashable {
     var title: String
     var isOn: Bool
     var sortOrder: Int
+    var autoResetRule: ResetRule?
+    var lastAutoResetTriggerDate: Date?
 
-    init(id: UUID = UUID(), title: String, isOn: Bool = false, sortOrder: Int) {
+    init(
+        id: UUID = UUID(),
+        title: String,
+        isOn: Bool = false,
+        sortOrder: Int,
+        autoResetRule: ResetRule? = nil,
+        lastAutoResetTriggerDate: Date? = nil
+    ) {
         self.id = id
         self.title = title
         self.isOn = isOn
         self.sortOrder = sortOrder
+        self.autoResetRule = autoResetRule
+        self.lastAutoResetTriggerDate = lastAutoResetTriggerDate
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case isOn
+        case sortOrder
+        case autoResetRule
+        case lastAutoResetTriggerDate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        title = try container.decode(String.self, forKey: .title)
+        isOn = try container.decodeIfPresent(Bool.self, forKey: .isOn) ?? false
+        sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
+        autoResetRule = try container.decodeIfPresent(ResetRule.self, forKey: .autoResetRule)
+        lastAutoResetTriggerDate = try container.decodeIfPresent(Date.self, forKey: .lastAutoResetTriggerDate)
     }
 }
 
@@ -42,9 +72,4 @@ enum ResetRule: Codable, Hashable {
         default: return "?"
         }
     }
-}
-
-struct ResetState: Codable, Hashable {
-    /// 最後にリセットを実行した「発火時刻」
-    var lastResetTriggerDate: Date?
 }

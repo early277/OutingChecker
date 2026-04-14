@@ -5,5 +5,6 @@ import SwiftUI
 struct OutingCheckerWidgetBundle: WidgetBundle {
     var body: some Widget {
         OutingCheckerWidget()
+        OutingCheckerTwoColumnWidget()
     }
 }

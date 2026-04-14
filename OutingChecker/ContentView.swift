@@ -4,20 +4,9 @@ import WidgetKit
 struct ContentView: View {
     @State private var items: [ChecklistItem] = []
     @State private var newTitle = ""
-    @State private var rule: ResetRule = .daily(hour: 5, minute: 0)
-    @State private var selectedRuleMode: RuleMode = .daily
-    @State private var selectedWeekday = 2
-    @State private var selectedOrdinal = 1
-    @State private var time = DateComponents(calendar: .current, hour: 5, minute: 0).date ?? Date()
+    @State private var editingItem: ChecklistItem?
 
     private let store = ChecklistStore()
-
-    enum RuleMode: String, CaseIterable, Identifiable {
-        case daily = "毎日"
-        case weekday = "曜日"
-        case nthWeekday = "第n曜日"
-        var id: String { rawValue }
-    }
 
     var body: some View {
         NavigationStack {
@@ -36,90 +25,79 @@ struct ContentView: View {
                         ForEach(items) { item in
                             HStack {
                                 SwitchPreview(isOn: item.isOn)
-                                Text(item.title)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.title)
+                                    Text(item.autoResetRule?.summary ?? "自動リセットなし")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Button("編集") {
+                                    editingItem = item
+                                }
                             }
                         }
                         .onDelete(perform: deleteItems)
                         .onMove(perform: moveItems)
                     }
                 }
-
-                Section("自動リセット") {
-                    Picker("方式", selection: $selectedRuleMode) {
-                        ForEach(RuleMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    if selectedRuleMode == .weekday || selectedRuleMode == .nthWeekday {
-                        Picker("曜日", selection: $selectedWeekday) {
-                            Text("日曜").tag(1)
-                            Text("月曜").tag(2)
-                            Text("火曜").tag(3)
-                            Text("水曜").tag(4)
-                            Text("木曜").tag(5)
-                            Text("金曜").tag(6)
-                            Text("土曜").tag(7)
-                        }
-                    }
-
-                    if selectedRuleMode == .nthWeekday {
-                        Picker("第何", selection: $selectedOrdinal) {
-                            ForEach(1...5, id: \.self) { value in
-                                Text("第\(value)").tag(value)
-                            }
-                        }
-                    }
-
-                    DatePicker("時刻", selection: $time, displayedComponents: .hourAndMinute)
-
-                    Button("設定を保存", action: saveRule)
-                    Text("現在: \(rule.summary)")
-                        .foregroundStyle(.secondary)
-                        .font(.footnote)
+            }
+            .navigationTitle("おでかけチェッカーウィジェット")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                EditButton()
+                ToolbarItem(placement: .principal) {
+                    Text("おでかけチェッカーウィジェット")
+                        .font(.headline.weight(.semibold))
+                        .scaleEffect(0.6)
+                        .lineLimit(1)
                 }
             }
-            .navigationTitle("お出かけチェッカー")
-            .toolbar { EditButton() }
             .onAppear(perform: reload)
+            .sheet(item: $editingItem) { item in
+                ItemEditorView(item: item) { updated in
+                    updateItem(updated)
+                }
+            }
         }
     }
 
     private func reload() {
         items = store.currentItemsApplyingResetIfNeeded()
-        rule = store.loadRule()
-        syncEditor(with: rule)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    private func persistItems() {
+        store.saveItems(items)
+        items = store.currentItemsApplyingResetIfNeeded()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func addItem() {
         let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
-        var current = store.loadItems()
-        current.append(ChecklistItem(title: title, sortOrder: current.count))
-        store.saveItems(current)
+        items.append(ChecklistItem(title: title, sortOrder: items.count))
         newTitle = ""
-        items = store.currentItemsApplyingResetIfNeeded()
-        WidgetCenter.shared.reloadAllTimelines()
+        persistItems()
+    }
+
+    private func updateItem(_ updated: ChecklistItem) {
+        guard let index = items.firstIndex(where: { $0.id == updated.id }) else { return }
+        items[index] = updated
+        normalizeSortOrder(&items)
+        persistItems()
     }
 
     private func deleteItems(at offsets: IndexSet) {
-        var current = store.loadItems()
-        current.remove(atOffsets: offsets)
-        normalizeSortOrder(&current)
-        store.saveItems(current)
-        items = store.currentItemsApplyingResetIfNeeded()
-        WidgetCenter.shared.reloadAllTimelines()
+        items.remove(atOffsets: offsets)
+        normalizeSortOrder(&items)
+        persistItems()
     }
 
     private func moveItems(from source: IndexSet, to destination: Int) {
-        var current = store.loadItems()
-        current.move(fromOffsets: source, toOffset: destination)
-        normalizeSortOrder(&current)
-        store.saveItems(current)
-        items = store.currentItemsApplyingResetIfNeeded()
-        WidgetCenter.shared.reloadAllTimelines()
+        items.move(fromOffsets: source, toOffset: destination)
+        normalizeSortOrder(&items)
+        persistItems()
     }
 
     private func normalizeSortOrder(_ list: inout [ChecklistItem]) {
@@ -127,44 +105,132 @@ struct ContentView: View {
             list[index].sortOrder = index
         }
     }
+}
 
-    private func syncEditor(with rule: ResetRule) {
+private struct ItemEditorView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    enum RuleMode: String, CaseIterable, Identifiable {
+        case daily = "毎日"
+        case weekday = "曜日"
+        case nthWeekday = "第n曜日"
+        var id: String { rawValue }
+    }
+
+    @State private var draft: ChecklistItem
+    private let onSave: (ChecklistItem) -> Void
+
+    @State private var autoResetEnabled: Bool
+    @State private var selectedRuleMode: RuleMode
+    @State private var selectedWeekday: Int
+    @State private var selectedOrdinal: Int
+    @State private var time: Date
+
+    init(item: ChecklistItem, onSave: @escaping (ChecklistItem) -> Void) {
+        _draft = State(initialValue: item)
+        self.onSave = onSave
+
+        let initialRule = item.autoResetRule ?? .daily(hour: 5, minute: 0)
+        _autoResetEnabled = State(initialValue: item.autoResetRule != nil)
+
         let calendar = Calendar.current
-        switch rule {
+        switch initialRule {
         case let .daily(hour, minute):
-            selectedRuleMode = .daily
-            time = calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date()
+            _selectedRuleMode = State(initialValue: .daily)
+            _selectedWeekday = State(initialValue: 2)
+            _selectedOrdinal = State(initialValue: 1)
+            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         case let .weekday(weekday, hour, minute):
-            selectedRuleMode = .weekday
-            selectedWeekday = weekday
-            time = calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date()
+            _selectedRuleMode = State(initialValue: .weekday)
+            _selectedWeekday = State(initialValue: weekday)
+            _selectedOrdinal = State(initialValue: 1)
+            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         case let .nthWeekday(ordinal, weekday, hour, minute):
-            selectedRuleMode = .nthWeekday
-            selectedOrdinal = ordinal
-            selectedWeekday = weekday
-            time = calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date()
+            _selectedRuleMode = State(initialValue: .nthWeekday)
+            _selectedWeekday = State(initialValue: weekday)
+            _selectedOrdinal = State(initialValue: ordinal)
+            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
         }
     }
 
-    private func saveRule() {
-        let comps = Calendar.current.dateComponents([.hour, .minute], from: time)
-        let hour = comps.hour ?? 5
-        let minute = comps.minute ?? 0
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("項目名") {
+                    TextField("項目名", text: $draft.title)
+                }
 
-        let newRule: ResetRule
-        switch selectedRuleMode {
-        case .daily:
-            newRule = .daily(hour: hour, minute: minute)
-        case .weekday:
-            newRule = .weekday(weekday: selectedWeekday, hour: hour, minute: minute)
-        case .nthWeekday:
-            newRule = .nthWeekday(ordinal: selectedOrdinal, weekday: selectedWeekday, hour: hour, minute: minute)
+                Section("自動リセット") {
+                    Toggle("有効", isOn: $autoResetEnabled)
+
+                    if autoResetEnabled {
+                        Picker("方式", selection: $selectedRuleMode) {
+                            ForEach(RuleMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        if selectedRuleMode == .weekday || selectedRuleMode == .nthWeekday {
+                            Picker("曜日", selection: $selectedWeekday) {
+                                Text("日曜").tag(1)
+                                Text("月曜").tag(2)
+                                Text("火曜").tag(3)
+                                Text("水曜").tag(4)
+                                Text("木曜").tag(5)
+                                Text("金曜").tag(6)
+                                Text("土曜").tag(7)
+                            }
+                        }
+
+                        if selectedRuleMode == .nthWeekday {
+                            Picker("第何", selection: $selectedOrdinal) {
+                                ForEach(1...5, id: \.self) { value in
+                                    Text("第\(value)").tag(value)
+                                }
+                            }
+                        }
+
+                        DatePicker("時刻", selection: $time, displayedComponents: .hourAndMinute)
+                    }
+                }
+            }
+            .navigationTitle("項目を編集")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("キャンセル") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        save()
+                        dismiss()
+                    }
+                    .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
         }
+    }
 
-        store.saveRule(newRule)
-        rule = newRule
-        items = store.currentItemsApplyingResetIfNeeded()
-        WidgetCenter.shared.reloadAllTimelines()
+    private func save() {
+        draft.title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if autoResetEnabled {
+            let comps = Calendar.current.dateComponents([.hour, .minute], from: time)
+            let hour = comps.hour ?? 5
+            let minute = comps.minute ?? 0
+
+            switch selectedRuleMode {
+            case .daily:
+                draft.autoResetRule = .daily(hour: hour, minute: minute)
+            case .weekday:
+                draft.autoResetRule = .weekday(weekday: selectedWeekday, hour: hour, minute: minute)
+            case .nthWeekday:
+                draft.autoResetRule = .nthWeekday(ordinal: selectedOrdinal, weekday: selectedWeekday, hour: hour, minute: minute)
+            }
+        } else {
+            draft.autoResetRule = nil
+            draft.lastAutoResetTriggerDate = nil
+        }
+        onSave(draft)
     }
 }
 
