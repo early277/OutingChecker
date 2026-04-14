@@ -204,7 +204,7 @@ private enum WidgetLayout {
 
     static func font(_ family: WidgetFamily) -> Font {
         switch family {
-        case .systemSmall: return .caption
+        case .systemSmall: return .body
         case .systemMedium: return .body
         case .systemLarge: return .body
         default: return .body
