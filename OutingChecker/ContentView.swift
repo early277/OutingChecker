@@ -3,7 +3,7 @@ import WidgetKit
 import UIKit
 
 struct ContentView: View {
-    @Environment(\.editMode) private var editMode
+    @State private var editMode: EditMode = .inactive
     @State private var items: [ChecklistItem] = []
     @State private var newTitle = ""
     @State private var editingItem: ChecklistItem?
@@ -19,7 +19,7 @@ struct ContentView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(isEditing ? "完了" : "編集") {
                             withAnimation {
-                                editMode?.wrappedValue = isEditing ? .inactive : .active
+                                editMode = isEditing ? .inactive : .active
                             }
                         }
                     }
@@ -31,6 +31,7 @@ struct ContentView: View {
                     }
                 }
                 .onAppear(perform: reload)
+                .environment(\.editMode, $editMode)
                 .sheet(item: $editingItem) { item in
                     ItemEditorView(item: item) { updated in
                         updateItem(updated)
@@ -139,7 +140,7 @@ struct ContentView: View {
     }
 
     private var isEditing: Bool {
-        editMode?.wrappedValue.isEditing == true
+        editMode.isEditing
     }
 
     private func quitApp() {
