@@ -67,11 +67,8 @@ struct ContentView: View {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func persistItems(mutating mutation: (inout [ChecklistItem]) -> Void) {
-        var latest = store.currentItemsApplyingResetIfNeeded()
-        mutation(&latest)
-        normalizeSortOrder(&latest)
-        store.saveItems(latest)
+    private func persistItems() {
+        store.saveItems(items)
         items = store.currentItemsApplyingResetIfNeeded()
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -79,29 +76,28 @@ struct ContentView: View {
     private func addItem() {
         let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
-        persistItems { latest in
-            latest.append(ChecklistItem(title: title, sortOrder: latest.count))
-        }
+        items.append(ChecklistItem(title: title, sortOrder: items.count))
         newTitle = ""
+        persistItems()
     }
 
     private func updateItem(_ updated: ChecklistItem) {
-        persistItems { latest in
-            guard let index = latest.firstIndex(where: { $0.id == updated.id }) else { return }
-            latest[index] = updated
-        }
+        guard let index = items.firstIndex(where: { $0.id == updated.id }) else { return }
+        items[index] = updated
+        normalizeSortOrder(&items)
+        persistItems()
     }
 
     private func deleteItems(at offsets: IndexSet) {
-        persistItems { latest in
-            latest.remove(atOffsets: offsets)
-        }
+        items.remove(atOffsets: offsets)
+        normalizeSortOrder(&items)
+        persistItems()
     }
 
     private func moveItems(from source: IndexSet, to destination: Int) {
-        persistItems { latest in
-            latest.move(fromOffsets: source, toOffset: destination)
-        }
+        items.move(fromOffsets: source, toOffset: destination)
+        normalizeSortOrder(&items)
+        persistItems()
     }
 
     private func normalizeSortOrder(_ list: inout [ChecklistItem]) {

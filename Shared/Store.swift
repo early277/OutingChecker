@@ -1,10 +1,6 @@
 import Foundation
 
 struct ChecklistStore {
-    private struct LegacyResetState: Codable {
-        var lastResetTriggerDate: Date?
-    }
-
     private let defaults: UserDefaults
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -22,12 +18,7 @@ struct ChecklistStore {
                 ChecklistItem(title: "スマホ", sortOrder: 2)
             ]
         }
-
-        var sortedItems = items.sorted { $0.sortOrder < $1.sortOrder }
-        if migrateLegacyGlobalResetIfNeeded(items: &sortedItems) {
-            saveItems(sortedItems)
-        }
-        return sortedItems
+        return items.sorted { $0.sortOrder < $1.sortOrder }
     }
 
     func saveItems(_ items: [ChecklistItem]) {
@@ -85,47 +76,5 @@ struct ChecklistStore {
         var items = loadItems()
         _ = applyResetIfNeeded(now: now, items: &items)
         return items
-    }
-
-    private func migrateLegacyGlobalResetIfNeeded(items: inout [ChecklistItem]) -> Bool {
-        guard !defaults.bool(forKey: AppConfig.perItemResetMigrationCompletedKey) else {
-            return false
-        }
-        defer {
-            defaults.set(true, forKey: AppConfig.perItemResetMigrationCompletedKey)
-            defaults.removeObject(forKey: AppConfig.resetRuleKey)
-            defaults.removeObject(forKey: AppConfig.resetStateKey)
-        }
-
-        let legacyRule: ResetRule?
-        if let data = defaults.data(forKey: AppConfig.resetRuleKey),
-           let rule = try? decoder.decode(ResetRule.self, from: data) {
-            legacyRule = rule
-        } else if defaults.data(forKey: AppConfig.resetStateKey) != nil {
-            legacyRule = .daily(hour: 5, minute: 0)
-        } else {
-            legacyRule = nil
-        }
-
-        guard let legacyRule else {
-            return false
-        }
-
-        let legacyState: LegacyResetState?
-        if let stateData = defaults.data(forKey: AppConfig.resetStateKey) {
-            legacyState = try? decoder.decode(LegacyResetState.self, from: stateData)
-        } else {
-            legacyState = nil
-        }
-
-        var changed = false
-        for index in items.indices where items[index].autoResetRule == nil {
-            items[index].autoResetRule = legacyRule
-            if items[index].lastAutoResetTriggerDate == nil {
-                items[index].lastAutoResetTriggerDate = legacyState?.lastResetTriggerDate
-            }
-            changed = true
-        }
-        return changed
     }
 }

@@ -7,5 +7,4 @@ enum AppConfig {
     static let itemsKey = "outingChecker.items"
     static let resetRuleKey = "outingChecker.resetRule"
     static let resetStateKey = "outingChecker.resetState"
-    static let perItemResetMigrationCompletedKey = "outingChecker.perItemResetMigrationCompleted"
 }
