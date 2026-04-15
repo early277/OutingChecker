@@ -4,7 +4,10 @@ import SwiftUI
 @main
 struct OutingCheckerWidgetBundle: WidgetBundle {
     var body: some Widget {
-        OutingCheckerWidget()
-        OutingCheckerTwoColumnWidget()
+        OutingCheckerSmallNamedWidget()
+        OutingCheckerSmallSwitchOnlyWidget()
+        OutingCheckerLargeNamedWidget()
+        OutingCheckerLargeSwitchOnlyWidget()
+        OutingCheckerLockScreenWidget()
     }
 }

@@ -33,115 +33,148 @@ struct OutingProvider: TimelineProvider {
     }
 }
 
-struct OutingCheckerWidget: Widget {
-    let kind = "OutingCheckerWidget"
+struct OutingCheckerSmallNamedWidget: Widget {
+    let kind = "OutingCheckerSmallNamedWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
-            OutingWidgetListView(entry: entry)
+            SwitchGridWidgetView(entry: entry, columns: 1, rows: 4, showTitle: true)
         }
-        .configurationDisplayName("お出かけチェッカー")
-        .description("ウィジェット上で直接 ON/OFF を切り替えます。")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .configurationDisplayName("小: 1列4行(名前あり)")
+        .description("スイッチと項目名を1列4行で表示します。")
+        .supportedFamilies([.systemSmall])
     }
 }
 
-struct OutingCheckerTwoColumnWidget: Widget {
-    let kind = "OutingCheckerTwoColumnWidget"
+struct OutingCheckerSmallSwitchOnlyWidget: Widget {
+    let kind = "OutingCheckerSmallSwitchOnlyWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
-            OutingWidgetTwoColumnView(entry: entry)
+            SwitchGridWidgetView(entry: entry, columns: 2, rows: 4, showTitle: false)
         }
-        .configurationDisplayName("お出かけチェッカー (2列)")
-        .description("2列レイアウトで項目を表示します。")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .configurationDisplayName("小: 2列4行(スイッチのみ)")
+        .description("スイッチのみを2列4行で表示します。")
+        .supportedFamilies([.systemSmall])
     }
 }
 
-private struct OutingWidgetListView: View {
-    let entry: OutingEntry
-    @Environment(\.widgetFamily) private var family
+struct OutingCheckerLargeNamedWidget: Widget {
+    let kind = "OutingCheckerLargeNamedWidget"
 
-    var body: some View {
-        let maxCount = WidgetLayout.maxItemsForSingleColumn(family)
-        let visibleItems = Array(entry.items.prefix(maxCount))
-
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
-                ForEach(visibleItems) { item in
-                    WidgetItemButton(
-                        item: item,
-                        compact: false,
-                        font: WidgetLayout.font(family)
-                    )
-                }
-
-                if visibleItems.isEmpty {
-                    Text("項目がありません")
-                        .font(WidgetLayout.font(family))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer(minLength: 0)
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            SwitchGridWidgetView(entry: entry, columns: 2, rows: 4, showTitle: true)
         }
-        .padding(WidgetLayout.padding(family))
-        .containerBackground(.background, for: .widget)
+        .configurationDisplayName("大: 2列4行(名前あり)")
+        .description("スイッチと項目名を2列4行で表示します。")
+        .supportedFamilies([.systemLarge])
     }
 }
 
-private struct OutingWidgetTwoColumnView: View {
-    let entry: OutingEntry
-    @Environment(\.widgetFamily) private var family
+struct OutingCheckerLargeSwitchOnlyWidget: Widget {
+    let kind = "OutingCheckerLargeSwitchOnlyWidget"
 
-    private var columns: [GridItem] {
-        [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            SwitchGridWidgetView(entry: entry, columns: 4, rows: 4, showTitle: false)
+        }
+        .configurationDisplayName("大: 4列4行(スイッチのみ)")
+        .description("スイッチのみを4列4行で表示します。")
+        .supportedFamilies([.systemLarge])
+    }
+}
+
+struct OutingCheckerLockScreenWidget: Widget {
+    let kind = "OutingCheckerLockScreenWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            LockScreenWidgetView(entry: entry)
+        }
+        .configurationDisplayName("ロック画面: おでかけチェッカー")
+        .description("タップでアプリを開き、現在の進捗を確認できます。")
+        .supportedFamilies([.accessoryInline, .accessoryRectangular])
+    }
+}
+
+private struct SwitchGridWidgetView: View {
+    let entry: OutingEntry
+    let columns: Int
+    let rows: Int
+    let showTitle: Bool
+
+    private var gridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 8), count: columns)
     }
 
     var body: some View {
-        let maxCount = WidgetLayout.maxItemsForTwoColumn(family)
-        let visibleItems = Array(entry.items.prefix(maxCount))
+        let visibleItems = WidgetLayout.columnMajorItems(entry.items, columns: columns, rows: rows)
 
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
-                LazyVGrid(columns: columns, alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
+        VStack(spacing: 8) {
+            if visibleItems.isEmpty {
+                Text("項目がありません")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            } else {
+                LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 8) {
                     ForEach(visibleItems) { item in
-                        WidgetItemButton(item: item, compact: false, font: WidgetLayout.font(family))
+                        WidgetItemButton(item: item, showTitle: showTitle)
                     }
                 }
-
-                if visibleItems.isEmpty {
-                    Text("項目がありません")
-                        .font(WidgetLayout.font(family))
-                        .foregroundStyle(.secondary)
-                }
             }
-            Spacer(minLength: 0)
         }
-        .padding(WidgetLayout.padding(family))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(12)
         .containerBackground(.background, for: .widget)
+    }
+}
+
+private struct LockScreenWidgetView: View {
+    let entry: OutingEntry
+    @Environment(\.widgetFamily) private var family
+
+    var body: some View {
+        let doneCount = entry.items.filter(\.isOn).count
+        let totalCount = entry.items.count
+
+        Group {
+            switch family {
+            case .accessoryInline:
+                Text("おでかけ: \(doneCount)/\(totalCount) 完了")
+            case .accessoryRectangular:
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("おでかけチェッカー")
+                        .font(.caption2)
+                    Text("\(doneCount)/\(totalCount) 完了")
+                        .font(.headline)
+                }
+            default:
+                Text("\(doneCount)/\(totalCount)")
+            }
+        }
     }
 }
 
 private struct WidgetItemButton: View {
     let item: ChecklistItem
-    let compact: Bool
-    let font: Font
+    let showTitle: Bool
 
     var body: some View {
         Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
-            HStack(spacing: 8) {
-                WidgetSwitchView(isOn: item.isOn, compact: compact)
-                Text(item.title)
-                    .font(font)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .allowsTightening(true)
+            HStack(spacing: 6) {
+                WidgetSwitchView(isOn: item.isOn)
+                if showTitle {
+                    Text(item.title)
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .allowsTightening(true)
+                }
                 Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
     }
@@ -149,21 +182,16 @@ private struct WidgetItemButton: View {
 
 private struct WidgetSwitchView: View {
     let isOn: Bool
-    let compact: Bool
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: compact ? 12 : 14)
+            RoundedRectangle(cornerRadius: 11)
                 .fill(isOn ? Color.green.opacity(0.9) : Color.gray.opacity(0.45))
-                .frame(width: compact ? 40 : 50, height: compact ? 22 : 28)
-            Text(isOn ? "済" : "未")
-                .font(compact ? .caption2.bold() : .caption.weight(.bold))
-                .foregroundStyle(.white)
-                .offset(x: isOn ? (compact ? -7 : -9) : (compact ? 7 : 9))
+                .frame(width: 38, height: 22)
             Circle()
                 .fill(Color.white)
-                .frame(width: compact ? 18 : 22, height: compact ? 18 : 22)
-                .offset(x: isOn ? (compact ? 9 : 11) : (compact ? -9 : -11))
+                .frame(width: 16, height: 16)
+                .offset(x: isOn ? 8 : -8)
                 .shadow(radius: 1)
         }
         .accessibilityLabel(isOn ? "オン" : "オフ")
@@ -171,47 +199,22 @@ private struct WidgetSwitchView: View {
 }
 
 private enum WidgetLayout {
-    static func maxItemsForSingleColumn(_ family: WidgetFamily) -> Int {
-        switch family {
-        case .systemSmall: return 4
-        case .systemMedium: return 4
-        case .systemLarge: return 8
-        default: return 4
-        }
-    }
+    static func columnMajorItems(_ items: [ChecklistItem], columns: Int, rows: Int) -> [ChecklistItem] {
+        guard columns > 0, rows > 0 else { return [] }
 
-    static func maxItemsForTwoColumn(_ family: WidgetFamily) -> Int {
-        switch family {
-        case .systemMedium: return 8
-        case .systemLarge: return 16
-        default: return 8
-        }
-    }
+        let maxCount = columns * rows
+        let source = Array(items.prefix(maxCount))
+        var arranged: [ChecklistItem?] = Array(repeating: nil, count: maxCount)
 
-    static func rowSpacing(_ family: WidgetFamily) -> CGFloat {
-        switch family {
-        case .systemSmall: return 8
-        case .systemMedium: return 10
-        case .systemLarge: return 12
-        default: return 10
+        for (index, item) in source.enumerated() {
+            let row = index % rows
+            let column = index / rows
+            let displayIndex = row * columns + column
+            if displayIndex < maxCount {
+                arranged[displayIndex] = item
+            }
         }
-    }
 
-    static func padding(_ family: WidgetFamily) -> CGFloat {
-        switch family {
-        case .systemSmall: return 12
-        case .systemMedium: return 14
-        case .systemLarge: return 16
-        default: return 14
-        }
-    }
-
-    static func font(_ family: WidgetFamily) -> Font {
-        switch family {
-        case .systemSmall: return .body
-        case .systemMedium: return .body
-        case .systemLarge: return .body
-        default: return .body
-        }
+        return arranged.compactMap { $0 }
     }
 }
