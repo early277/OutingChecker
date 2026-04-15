@@ -109,7 +109,8 @@ private struct SwitchGridWidgetView: View {
     }
 
     var body: some View {
-        let visibleItems = WidgetLayout.columnMajorItems(entry.items, columns: columns, rows: rows)
+        let visibleSlots = WidgetLayout.columnMajorItems(entry.items, columns: columns, rows: rows)
+        let visibleItems = visibleSlots.compactMap { $0 }
 
         VStack(spacing: 8) {
             if visibleItems.isEmpty {
@@ -118,8 +119,13 @@ private struct SwitchGridWidgetView: View {
                     .font(.caption)
             } else {
                 LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 8) {
-                    ForEach(visibleItems) { item in
-                        WidgetItemButton(item: item, showTitle: showTitle)
+                    ForEach(Array(visibleSlots.enumerated()), id: \.offset) { _, slot in
+                        if let item = slot {
+                            WidgetItemButton(item: item, showTitle: showTitle)
+                        } else {
+                            Color.clear
+                                .frame(maxWidth: .infinity, minHeight: 22)
+                        }
                     }
                 }
             }
@@ -199,7 +205,7 @@ private struct WidgetSwitchView: View {
 }
 
 private enum WidgetLayout {
-    static func columnMajorItems(_ items: [ChecklistItem], columns: Int, rows: Int) -> [ChecklistItem] {
+    static func columnMajorItems(_ items: [ChecklistItem], columns: Int, rows: Int) -> [ChecklistItem?] {
         guard columns > 0, rows > 0 else { return [] }
 
         let maxCount = columns * rows
@@ -215,6 +221,6 @@ private enum WidgetLayout {
             }
         }
 
-        return arranged.compactMap { $0 }
+        return arranged
     }
 }
