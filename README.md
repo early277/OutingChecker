@@ -17,7 +17,17 @@
 1. **通常レイアウト**（Small / Medium / Large）
 2. **2列レイアウト**（Medium / Large）
 
-加えて、ロック画面向けウィジェット（Inline / Rectangular）を提供します。ロック画面ウィジェットはタップでアプリを開けます。
+加えて、ロック画面向けウィジェット（Inline / Circular / Rectangular）を提供します。ロック画面ウィジェットはタップでアプリを開けます。
+
+### サイズ対応（重要）
+
+- **ロック画面ウィジェット**: `accessoryInline` / `accessoryCircular` / `accessoryRectangular`
+- **ホーム画面ウィジェット**: `systemSmall` / `systemMedium` / `systemLarge`
+
+`OutingCheckerLockScreenWidget` に `systemMedium` を要求すると、以下のようなエラーで表示に失敗します。
+
+- `Request widget family (systemMedium) is not supported by this widget kind (OutingCheckerLockScreenWidget)`
+- `Failed to open "com.apple.springboard"`（上記サイズ不一致に起因する副次エラー）
 
 ### 項目配置順
 
