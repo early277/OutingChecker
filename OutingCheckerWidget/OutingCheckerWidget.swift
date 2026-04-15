@@ -68,7 +68,7 @@ struct OutingCheckerLockScreenWidget: Widget {
         }
         .configurationDisplayName("ロック画面: おでかけチェッカーウィジェット")
         .description("タップでアプリを開き、現在の進捗を確認できます。")
-        .supportedFamilies([.accessoryInline, .accessoryRectangular])
+        .supportedFamilies([.accessoryInline, .accessoryCircular, .accessoryRectangular])
     }
 }
 
@@ -151,22 +151,48 @@ private struct LockScreenWidgetView: View {
     var body: some View {
         let doneCount = entry.items.filter(\.isOn).count
         let totalCount = entry.items.count
+        let previewItems = Array(entry.items.prefix(2))
 
         Group {
             switch family {
             case .accessoryInline:
                 Text("おでかけ: \(doneCount)/\(totalCount) 完了")
+            case .accessoryCircular:
+                ZStack {
+                    Circle()
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 3)
+                    Circle()
+                        .trim(from: 0, to: totalCount == 0 ? 0 : CGFloat(doneCount) / CGFloat(totalCount))
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Text("\(doneCount)")
+                        .font(.caption2.bold())
+                }
             case .accessoryRectangular:
                 VStack(alignment: .leading, spacing: 2) {
                     Text("おでかけチェッカーウィジェット")
                         .font(.caption2)
-                    Text("\(doneCount)/\(totalCount) 完了")
-                        .font(.headline)
+                    if previewItems.isEmpty {
+                        Text("項目がありません")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(previewItems) { item in
+                            HStack(spacing: 4) {
+                                Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                                    .foregroundStyle(item.isOn ? .green : .secondary)
+                                Text(item.title)
+                                    .lineLimit(1)
+                            }
+                            .font(.caption2)
+                        }
+                    }
                 }
             default:
                 Text("\(doneCount)/\(totalCount)")
             }
         }
+        .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
     }
 }
