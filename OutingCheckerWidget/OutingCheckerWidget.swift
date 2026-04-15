@@ -92,7 +92,7 @@ struct OutingCheckerLockScreenWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenWidgetView(entry: entry)
         }
-        .configurationDisplayName("ロック画面: おでかけチェッカー")
+        .configurationDisplayName("ロック画面: おでかけチェッカーウィジェット")
         .description("タップでアプリを開き、現在の進捗を確認できます。")
         .supportedFamilies([.accessoryInline, .accessoryRectangular])
     }
@@ -150,7 +150,7 @@ private struct LockScreenWidgetView: View {
                 Text("おでかけ: \(doneCount)/\(totalCount) 完了")
             case .accessoryRectangular:
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("おでかけチェッカー")
+                    Text("おでかけチェッカーウィジェット")
                         .font(.caption2)
                     Text("\(doneCount)/\(totalCount) 完了")
                         .font(.headline)
