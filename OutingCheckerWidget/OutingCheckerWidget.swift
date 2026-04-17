@@ -66,9 +66,22 @@ struct OutingCheckerLockScreenWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenWidgetView(entry: entry)
         }
-        .configurationDisplayName("ロック画面: おでかけチェッカーウィジェット")
-        .description("タップでアプリを開き、現在の進捗を確認できます。")
+        .configurationDisplayName("ロック画面: 残り項目数")
+        .description("タイトルなしで残り項目数を表示します。")
         .supportedFamilies([.accessoryInline, .accessoryCircular, .accessoryRectangular])
+    }
+}
+
+struct OutingCheckerLockScreenSixteenWidget: Widget {
+    let kind = "OutingCheckerLockScreenSixteenWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            LockScreenSixteenWidgetView(entry: entry)
+        }
+        .configurationDisplayName("ロック画面: 16項目表示")
+        .description("先頭16項目の状態を一覧表示します。")
+        .supportedFamilies([.accessoryRectangular])
     }
 }
 
@@ -151,12 +164,12 @@ private struct LockScreenWidgetView: View {
     var body: some View {
         let doneCount = entry.items.filter(\.isOn).count
         let totalCount = entry.items.count
-        let previewItems = Array(entry.items.prefix(2))
+        let remainingCount = max(totalCount - doneCount, 0)
 
         Group {
             switch family {
             case .accessoryInline:
-                Text("おでかけ: \(doneCount)/\(totalCount) 完了")
+                Text("残り \(remainingCount)項目")
             case .accessoryCircular:
                 ZStack {
                     Circle()
@@ -165,32 +178,59 @@ private struct LockScreenWidgetView: View {
                         .trim(from: 0, to: totalCount == 0 ? 0 : CGFloat(doneCount) / CGFloat(totalCount))
                         .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
-                    Text("\(doneCount)")
+                    Text("\(remainingCount)")
                         .font(.caption2.bold())
                 }
             case .accessoryRectangular:
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("おでかけチェッカーウィジェット")
-                        .font(.caption2)
-                    if previewItems.isEmpty {
-                        Text("項目がありません")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(previewItems) { item in
-                            HStack(spacing: 4) {
-                                Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(item.isOn ? .green : .secondary)
-                                Text(item.title)
-                                    .lineLimit(1)
-                            }
-                            .font(.caption2)
-                        }
-                    }
+                    Text("残り \(remainingCount) / \(totalCount)")
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
             default:
-                Text("\(doneCount)/\(totalCount)")
+                Text("残り \(remainingCount)")
             }
+        }
+        .containerBackground(.clear, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
+
+private struct LockScreenSixteenWidgetView: View {
+    let entry: OutingEntry
+
+    private var firstSixteenItems: [ChecklistItem] {
+        Array(entry.items.prefix(16))
+    }
+
+    var body: some View {
+        let doneCount = entry.items.filter(\.isOn).count
+        let totalCount = entry.items.count
+        let remainingCount = max(totalCount - doneCount, 0)
+        let columns = Array(repeating: GridItem(.fixed(8), spacing: 4), count: 4)
+
+        VStack(alignment: .leading, spacing: 4) {
+            Text("残り \(remainingCount)")
+                .font(.caption.bold())
+
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 4) {
+                ForEach(0..<16, id: \.self) { index in
+                    if index < firstSixteenItems.count {
+                        Circle()
+                            .fill(firstSixteenItems[index].isOn ? Color.green : Color.secondary.opacity(0.35))
+                            .frame(width: 8, height: 8)
+                    } else {
+                        Circle()
+                            .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+            }
+
+            Text("\(min(totalCount, 16))/16")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))

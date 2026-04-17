@@ -7,5 +7,6 @@ struct OutingCheckerWidgetBundle: WidgetBundle {
         OutingCheckerWidget()
         OutingCheckerTwoColumnWidget()
         OutingCheckerLockScreenWidget()
+        OutingCheckerLockScreenSixteenWidget()
     }
 }
