@@ -59,6 +59,19 @@ struct OutingCheckerTwoColumnWidget: Widget {
     }
 }
 
+struct OutingCheckerLockScreenWidget: Widget {
+    let kind = "OutingCheckerLockScreenWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            LockScreenWidgetView(entry: entry)
+        }
+        .configurationDisplayName("ロック画面: おでかけチェッカーウィジェット")
+        .description("タップでアプリを開き、現在の進捗を確認できます。")
+        .supportedFamilies([.accessoryInline, .accessoryCircular, .accessoryRectangular])
+    }
+}
+
 private struct OutingWidgetListView: View {
     let entry: OutingEntry
     @Environment(\.widgetFamily) private var family
@@ -100,15 +113,21 @@ private struct OutingWidgetTwoColumnView: View {
     }
 
     var body: some View {
-        let maxCount = WidgetLayout.maxItemsForTwoColumn(family)
-        let visibleItems = Array(entry.items.prefix(maxCount))
+        let rows = WidgetLayout.maxItemsForTwoColumn(family) / 2
+        let visibleSlots = WidgetLayout.columnMajorItems(entry.items, columns: 2, rows: rows)
+        let visibleItems = visibleSlots.compactMap { $0 }
 
         VStack(spacing: 0) {
             Spacer(minLength: 0)
             VStack(alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
                 LazyVGrid(columns: columns, alignment: .leading, spacing: WidgetLayout.rowSpacing(family)) {
-                    ForEach(visibleItems) { item in
-                        WidgetItemButton(item: item, compact: false, font: WidgetLayout.font(family))
+                    ForEach(Array(visibleSlots.enumerated()), id: \.offset) { _, slot in
+                        if let item = slot {
+                            WidgetItemButton(item: item, compact: false, font: WidgetLayout.font(family))
+                        } else {
+                            Color.clear
+                                .frame(maxWidth: .infinity, minHeight: 28)
+                        }
                     }
                 }
 
@@ -122,6 +141,59 @@ private struct OutingWidgetTwoColumnView: View {
         }
         .padding(WidgetLayout.padding(family))
         .containerBackground(.background, for: .widget)
+    }
+}
+
+private struct LockScreenWidgetView: View {
+    let entry: OutingEntry
+    @Environment(\.widgetFamily) private var family
+
+    var body: some View {
+        let doneCount = entry.items.filter(\.isOn).count
+        let totalCount = entry.items.count
+        let previewItems = Array(entry.items.prefix(2))
+
+        Group {
+            switch family {
+            case .accessoryInline:
+                Text("おでかけ: \(doneCount)/\(totalCount) 完了")
+            case .accessoryCircular:
+                ZStack {
+                    Circle()
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 3)
+                    Circle()
+                        .trim(from: 0, to: totalCount == 0 ? 0 : CGFloat(doneCount) / CGFloat(totalCount))
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Text("\(doneCount)")
+                        .font(.caption2.bold())
+                }
+            case .accessoryRectangular:
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("おでかけチェッカーウィジェット")
+                        .font(.caption2)
+                    if previewItems.isEmpty {
+                        Text("項目がありません")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(previewItems) { item in
+                            HStack(spacing: 4) {
+                                Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                                    .foregroundStyle(item.isOn ? .green : .secondary)
+                                Text(item.title)
+                                    .lineLimit(1)
+                            }
+                            .font(.caption2)
+                        }
+                    }
+                }
+            default:
+                Text("\(doneCount)/\(totalCount)")
+            }
+        }
+        .containerBackground(.clear, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
     }
 }
 
@@ -213,5 +285,24 @@ private enum WidgetLayout {
         case .systemLarge: return .body
         default: return .body
         }
+    }
+
+    static func columnMajorItems(_ items: [ChecklistItem], columns: Int, rows: Int) -> [ChecklistItem?] {
+        guard columns > 0, rows > 0 else { return [] }
+
+        let maxCount = columns * rows
+        let source = Array(items.prefix(maxCount))
+        var arranged: [ChecklistItem?] = Array(repeating: nil, count: maxCount)
+
+        for (index, item) in source.enumerated() {
+            let row = index % rows
+            let column = index / rows
+            let displayIndex = row * columns + column
+            if displayIndex < maxCount {
+                arranged[displayIndex] = item
+            }
+        }
+
+        return arranged
     }
 }

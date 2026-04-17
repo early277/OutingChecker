@@ -1,0 +1,46 @@
+# おでかけチェッカーウィジェット
+
+おでかけチェッカーウィジェット は、持ち物チェックを **アプリ本体** と **ウィジェット** の両方から管理できる iOS アプリです。
+
+## 主な機能
+
+- 項目の追加 / 編集 / 削除 / 並び替え
+- アプリ本体から各項目の ON/OFF 切り替え
+- ウィジェットから各項目の ON/OFF 切り替え（インタラクティブ）
+- ロック画面ウィジェット（タップでアプリ起動）
+- 自動リセット（毎日 / 曜日 / 第 n 曜日）
+
+## ウィジェット構成
+
+ホーム画面ウィジェットは以下の 2 種類です（既存仕様を維持）。
+
+1. **通常レイアウト**（Small / Medium / Large）
+2. **2列レイアウト**（Medium / Large）
+
+加えて、ロック画面向けウィジェット（Inline / Circular / Rectangular）を提供します。ロック画面ウィジェットはタップでアプリを開けます。
+
+### サイズ対応（重要）
+
+- **ロック画面ウィジェット**: `accessoryInline` / `accessoryCircular` / `accessoryRectangular`
+- **ホーム画面ウィジェット**: `systemSmall` / `systemMedium` / `systemLarge`
+
+`OutingCheckerLockScreenWidget` に `systemMedium` を要求すると、以下のようなエラーで表示に失敗します。
+
+- `Request widget family (systemMedium) is not supported by this widget kind (OutingCheckerLockScreenWidget)`
+- `Failed to open "com.apple.springboard"`（上記サイズ不一致に起因する副次エラー）
+
+### 項目配置順
+
+すべてのグリッド系ウィジェットは、**1 列目を上から埋めてから 2 列目へ進む**（列優先）順で配置されます。
+
+## データと安全性
+
+- データは端末内の `UserDefaults`（App Group）に保存されます。
+- 外部サーバーへの送信処理は実装していません。
+- 取得する個人情報はありません（入力したチェック項目名のみ、端末内保持）。
+- 詳細は `PRIVACY_POLICY.md` を参照してください。
+
+## 開発メモ
+
+- 共有ロジックは `Shared/` 配下に配置
+- ウィジェット実装は `OutingCheckerWidget/` 配下

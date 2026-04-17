@@ -74,7 +74,14 @@ struct ContentView: View {
     private var itemList: some View {
         ForEach(items) { item in
             HStack {
-                SwitchPreview(isOn: item.isOn)
+                Button {
+                    toggleItem(item)
+                } label: {
+                    SwitchPreview(isOn: item.isOn)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(item.title) を\(item.isOn ? "オフ" : "オン")にする")
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                     Text(item.autoResetRule?.summary ?? "自動リセットなし")
@@ -118,6 +125,13 @@ struct ContentView: View {
         persistItems { latest in
             guard let index = latest.firstIndex(where: { $0.id == updated.id }) else { return }
             latest[index] = updated
+        }
+    }
+
+    private func toggleItem(_ item: ChecklistItem) {
+        persistItems { latest in
+            guard let index = latest.firstIndex(where: { $0.id == item.id }) else { return }
+            latest[index].isOn.toggle()
         }
     }
 
