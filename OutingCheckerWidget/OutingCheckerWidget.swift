@@ -59,28 +59,41 @@ struct OutingCheckerTwoColumnWidget: Widget {
     }
 }
 
-struct OutingCheckerLockScreenWidget: Widget {
-    let kind = "OutingCheckerLockScreenWidget"
+struct OutingCheckerLockScreenCheckboxGridWidget: Widget {
+    let kind = "OutingCheckerLockScreenCheckboxGridWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
-            LockScreenWidgetView(entry: entry)
+            LockScreenCheckboxGridView(entry: entry)
         }
-        .configurationDisplayName("ロック画面: 残り項目数")
-        .description("タイトルなしで残り項目数を表示します。")
-        .supportedFamilies([.accessoryInline, .accessoryCircular, .accessoryRectangular])
+        .configurationDisplayName("ロック画面(小): チェック4x4")
+        .description("項目数分のチェックボックスを4行4列で表示します。")
+        .supportedFamilies([.accessoryCircular])
     }
 }
 
-struct OutingCheckerLockScreenSixteenWidget: Widget {
-    let kind = "OutingCheckerLockScreenSixteenWidget"
+struct OutingCheckerLockScreenPendingListWidget: Widget {
+    let kind = "OutingCheckerLockScreenPendingListWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
-            LockScreenSixteenWidgetView(entry: entry)
+            LockScreenPendingListView(entry: entry)
         }
-        .configurationDisplayName("ロック画面: 16項目表示")
-        .description("先頭16項目の状態を一覧表示します。")
+        .configurationDisplayName("ロック画面(小): 未達成4x1")
+        .description("未達成項目を4行1列で表示します。")
+        .supportedFamilies([.accessoryRectangular])
+    }
+}
+
+struct OutingCheckerLockScreenPendingGridWidget: Widget {
+    let kind = "OutingCheckerLockScreenPendingGridWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            LockScreenPendingGridView(entry: entry)
+        }
+        .configurationDisplayName("ロック画面(大): 未達成4x4")
+        .description("未達成項目を4行4列で表示します。")
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -157,47 +170,7 @@ private struct OutingWidgetTwoColumnView: View {
     }
 }
 
-private struct LockScreenWidgetView: View {
-    let entry: OutingEntry
-    @Environment(\.widgetFamily) private var family
-
-    var body: some View {
-        let doneCount = entry.items.filter(\.isOn).count
-        let totalCount = entry.items.count
-        let remainingCount = max(totalCount - doneCount, 0)
-
-        Group {
-            switch family {
-            case .accessoryInline:
-                Text("残り \(remainingCount)項目")
-            case .accessoryCircular:
-                ZStack {
-                    Circle()
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 3)
-                    Circle()
-                        .trim(from: 0, to: totalCount == 0 ? 0 : CGFloat(doneCount) / CGFloat(totalCount))
-                        .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                    Text("\(remainingCount)")
-                        .font(.caption2.bold())
-                }
-            case .accessoryRectangular:
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("残り \(remainingCount) / \(totalCount)")
-                        .font(.headline)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-            default:
-                Text("残り \(remainingCount)")
-            }
-        }
-        .containerBackground(.clear, for: .widget)
-        .widgetURL(URL(string: "outingchecker://open"))
-    }
-}
-
-private struct LockScreenSixteenWidgetView: View {
+private struct LockScreenCheckboxGridView: View {
     let entry: OutingEntry
 
     private var firstSixteenItems: [ChecklistItem] {
@@ -205,32 +178,90 @@ private struct LockScreenSixteenWidgetView: View {
     }
 
     var body: some View {
-        let doneCount = entry.items.filter(\.isOn).count
-        let totalCount = entry.items.count
-        let remainingCount = max(totalCount - doneCount, 0)
-        let columns = Array(repeating: GridItem(.fixed(8), spacing: 4), count: 4)
+        let columns = Array(repeating: GridItem(.fixed(6), spacing: 2), count: 4)
 
-        VStack(alignment: .leading, spacing: 4) {
-            Text("残り \(remainingCount)")
-                .font(.caption.bold())
-
+        ZStack {
+            Circle()
+                .fill(Color.clear)
             LazyVGrid(columns: columns, alignment: .leading, spacing: 4) {
                 ForEach(0..<16, id: \.self) { index in
                     if index < firstSixteenItems.count {
-                        Circle()
-                            .fill(firstSixteenItems[index].isOn ? Color.green : Color.secondary.opacity(0.35))
-                            .frame(width: 8, height: 8)
+                        Image(systemName: firstSixteenItems[index].isOn ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 6, weight: .semibold))
+                            .foregroundStyle(firstSixteenItems[index].isOn ? .green : .secondary)
                     } else {
-                        Circle()
-                            .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
-                            .frame(width: 8, height: 8)
+                        Image(systemName: "square")
+                            .font(.system(size: 6, weight: .semibold))
+                            .foregroundStyle(.secondary.opacity(0.2))
                     }
                 }
             }
+            .padding(4)
+        }
+        .containerBackground(.clear, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
 
-            Text("\(min(totalCount, 16))/16")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+private struct LockScreenPendingListView: View {
+    let entry: OutingEntry
+
+    private var pendingItems: [ChecklistItem] {
+        entry.items.filter { !$0.isOn }
+    }
+
+    var body: some View {
+        let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 1, rows: 4)
+
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
+                if let item = slot {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(item.title)
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
+                } else {
+                    Color.clear.frame(height: 12)
+                }
+            }
+        }
+        .containerBackground(.clear, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
+
+private struct LockScreenPendingGridView: View {
+    let entry: OutingEntry
+
+    private var pendingItems: [ChecklistItem] {
+        entry.items.filter { !$0.isOn }
+    }
+
+    var body: some View {
+        let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 4)
+        let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 4, rows: 4)
+
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
+            ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
+                if let item = slot {
+                    HStack(spacing: 2) {
+                        Image(systemName: "square")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.secondary)
+                        Text(item.title)
+                            .font(.system(size: 8))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Color.clear.frame(height: 10)
+                }
+            }
         }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
