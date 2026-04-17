@@ -46,23 +46,32 @@ struct ChecklistItem: Identifiable, Codable, Hashable {
 
 enum ResetRule: Codable, Hashable {
     case daily(hour: Int, minute: Int)
+    case dailyHours(hours: [Int])
     case weekday(weekday: Int, hour: Int, minute: Int)
     case weekdays(weekdays: [Int], hour: Int, minute: Int)
+    case weekdaysHours(weekdays: [Int], hours: [Int])
     case nthWeekday(ordinal: Int, weekday: Int, hour: Int, minute: Int)
     case nthWeekdays(ordinals: [Int], weekdays: [Int], hour: Int, minute: Int)
+    case nthWeekdaysHours(ordinals: [Int], weekdays: [Int], hours: [Int])
 
     var summary: String {
         switch self {
         case let .daily(hour, minute):
             return String(format: "毎日 %02d:%02d", hour, minute)
+        case let .dailyHours(hours):
+            return "毎日 \(hourJapaneseList(hours))"
         case let .weekday(weekday, hour, minute):
             return "毎週 \(weekdayJapanese(weekday)) \(String(format: "%02d:%02d", hour, minute))"
         case let .weekdays(weekdays, hour, minute):
             return "毎週 \(weekdayJapaneseList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
+        case let .weekdaysHours(weekdays, hours):
+            return "毎週 \(weekdayJapaneseList(weekdays)) \(hourJapaneseList(hours))"
         case let .nthWeekday(ordinal, weekday, hour, minute):
             return "毎月第\(ordinal)\(weekdayJapanese(weekday)) \(String(format: "%02d:%02d", hour, minute))"
         case let .nthWeekdays(ordinals, weekdays, hour, minute):
             return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
+        case let .nthWeekdaysHours(ordinals, weekdays, hours):
+            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays)) \(hourJapaneseList(hours))"
         }
     }
 
@@ -86,6 +95,11 @@ enum ResetRule: Codable, Hashable {
 
     private func ordinalJapaneseList(_ values: [Int]) -> String {
         let normalized = Array(Set(values)).sorted().map { "第\($0)" }
+        return normalized.isEmpty ? "未選択" : normalized.joined(separator: "・")
+    }
+
+    private func hourJapaneseList(_ values: [Int]) -> String {
+        let normalized = Array(Set(values)).sorted().map { String(format: "%02d:00", $0) }
         return normalized.isEmpty ? "未選択" : normalized.joined(separator: "・")
     }
 }
