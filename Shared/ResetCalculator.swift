@@ -5,12 +5,26 @@ enum ResetCalculator {
         switch rule {
         case let .daily(hour, minute):
             return latestDailyTrigger(beforeOrAt: now, hour: hour, minute: minute, calendar: calendar)
+        case let .dailyHours(hours):
+            return hours
+                .compactMap { latestDailyTrigger(beforeOrAt: now, hour: $0, minute: 0, calendar: calendar) }
+                .max()
         case let .weekday(weekday, hour, minute):
             return latestWeekdayTrigger(beforeOrAt: now, weekday: weekday, hour: hour, minute: minute, calendar: calendar)
         case let .weekdays(weekdays, hour, minute):
             return weekdays
                 .compactMap { latestWeekdayTrigger(beforeOrAt: now, weekday: $0, hour: hour, minute: minute, calendar: calendar) }
                 .max()
+        case let .weekdaysHours(weekdays, hours):
+            var candidates: [Date] = []
+            for weekday in weekdays {
+                for hour in hours {
+                    if let candidate = latestWeekdayTrigger(beforeOrAt: now, weekday: weekday, hour: hour, minute: 0, calendar: calendar) {
+                        candidates.append(candidate)
+                    }
+                }
+            }
+            return candidates.max()
         case let .nthWeekday(ordinal, weekday, hour, minute):
             return latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, calendar: calendar)
         case let .nthWeekdays(ordinals, weekdays, hour, minute):
@@ -19,6 +33,18 @@ enum ResetCalculator {
                 for weekday in weekdays {
                     if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, calendar: calendar) {
                         candidates.append(candidate)
+                    }
+                }
+            }
+            return candidates.max()
+        case let .nthWeekdaysHours(ordinals, weekdays, hours):
+            var candidates: [Date] = []
+            for ordinal in ordinals {
+                for weekday in weekdays {
+                    for hour in hours {
+                        if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: 0, calendar: calendar) {
+                            candidates.append(candidate)
+                        }
                     }
                 }
             }

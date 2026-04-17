@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var items: [ChecklistItem] = []
     @State private var newTitle = ""
     @State private var editingItem: ChecklistItem?
+    @Environment(\.scenePhase) private var scenePhase
 
     private let store = ChecklistStore()
 
@@ -31,6 +32,11 @@ struct ContentView: View {
                     }
                 }
                 .onAppear(perform: reload)
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        reload()
+                    }
+                }
                 .environment(\.editMode, $editMode)
                 .sheet(item: $editingItem) { item in
                     ItemEditorView(item: item) { updated in
@@ -181,7 +187,7 @@ private struct ItemEditorView: View {
     @State private var selectedRuleMode: RuleMode
     @State private var selectedWeekdays: Set<Int>
     @State private var selectedOrdinals: Set<Int>
-    @State private var time: Date
+    @State private var selectedHours: Set<Int>
 
     init(item: ChecklistItem, onSave: @escaping (ChecklistItem) -> Void) {
         _draft = State(initialValue: item)
@@ -190,33 +196,47 @@ private struct ItemEditorView: View {
         let initialRule = item.autoResetRule ?? .daily(hour: 5, minute: 0)
         _autoResetEnabled = State(initialValue: item.autoResetRule != nil)
 
-        let calendar = Calendar.current
         switch initialRule {
-        case let .daily(hour, minute):
+        case let .daily(hour, _):
             _selectedRuleMode = State(initialValue: .daily)
             _selectedWeekdays = State(initialValue: [2])
             _selectedOrdinals = State(initialValue: [1])
-            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
-        case let .weekday(weekday, hour, minute):
+            _selectedHours = State(initialValue: [hour])
+        case let .dailyHours(hours):
+            _selectedRuleMode = State(initialValue: .daily)
+            _selectedWeekdays = State(initialValue: [2])
+            _selectedOrdinals = State(initialValue: [1])
+            _selectedHours = State(initialValue: Set(hours))
+        case let .weekday(weekday, hour, _):
             _selectedRuleMode = State(initialValue: .weekday)
             _selectedWeekdays = State(initialValue: [weekday])
             _selectedOrdinals = State(initialValue: [1])
-            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
-        case let .weekdays(weekdays, hour, minute):
+            _selectedHours = State(initialValue: [hour])
+        case let .weekdays(weekdays, hour, _):
             _selectedRuleMode = State(initialValue: .weekday)
             _selectedWeekdays = State(initialValue: Set(weekdays))
             _selectedOrdinals = State(initialValue: [1])
-            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
-        case let .nthWeekday(ordinal, weekday, hour, minute):
+            _selectedHours = State(initialValue: [hour])
+        case let .weekdaysHours(weekdays, hours):
+            _selectedRuleMode = State(initialValue: .weekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: [1])
+            _selectedHours = State(initialValue: Set(hours))
+        case let .nthWeekday(ordinal, weekday, hour, _):
             _selectedRuleMode = State(initialValue: .nthWeekday)
             _selectedWeekdays = State(initialValue: [weekday])
             _selectedOrdinals = State(initialValue: [ordinal])
-            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
-        case let .nthWeekdays(ordinals, weekdays, hour, minute):
+            _selectedHours = State(initialValue: [hour])
+        case let .nthWeekdays(ordinals, weekdays, hour, _):
             _selectedRuleMode = State(initialValue: .nthWeekday)
             _selectedWeekdays = State(initialValue: Set(weekdays))
             _selectedOrdinals = State(initialValue: Set(ordinals))
-            _time = State(initialValue: calendar.date(from: DateComponents(hour: hour, minute: minute)) ?? Date())
+            _selectedHours = State(initialValue: [hour])
+        case let .nthWeekdaysHours(ordinals, weekdays, hours):
+            _selectedRuleMode = State(initialValue: .nthWeekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: Set(ordinals))
+            _selectedHours = State(initialValue: Set(hours))
         }
     }
 
@@ -270,7 +290,12 @@ private struct ItemEditorView: View {
                             }
                         }
 
-                        DatePicker("時刻", selection: $time, displayedComponents: .hourAndMinute)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("時刻（複数選択）")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            HourMultiSelectGrid(selectedHours: $selectedHours)
+                        }
                     }
                 }
             }
@@ -293,30 +318,41 @@ private struct ItemEditorView: View {
     private func save() {
         draft.title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if autoResetEnabled {
-            let comps = Calendar.current.dateComponents([.hour, .minute], from: time)
-            let hour = comps.hour ?? 5
-            let minute = comps.minute ?? 0
+            let hours = selectedHours.isEmpty ? [5] : Array(selectedHours).sorted()
 
             switch selectedRuleMode {
             case .daily:
-                draft.autoResetRule = .daily(hour: hour, minute: minute)
+                if hours.count == 1, let hour = hours.first {
+                    draft.autoResetRule = .daily(hour: hour, minute: 0)
+                } else {
+                    draft.autoResetRule = .dailyHours(hours: hours)
+                }
             case .weekday:
                 let weekdays = selectedWeekdays.isEmpty ? [2] : Array(selectedWeekdays).sorted()
-                if weekdays.count == 1, let weekday = weekdays.first {
-                    draft.autoResetRule = .weekday(weekday: weekday, hour: hour, minute: minute)
+                if weekdays.count == 1,
+                   hours.count == 1,
+                   let weekday = weekdays.first,
+                   let hour = hours.first {
+                    draft.autoResetRule = .weekday(weekday: weekday, hour: hour, minute: 0)
+                } else if hours.count == 1, let hour = hours.first {
+                    draft.autoResetRule = .weekdays(weekdays: weekdays, hour: hour, minute: 0)
                 } else {
-                    draft.autoResetRule = .weekdays(weekdays: weekdays, hour: hour, minute: minute)
+                    draft.autoResetRule = .weekdaysHours(weekdays: weekdays, hours: hours)
                 }
             case .nthWeekday:
                 let ordinals = selectedOrdinals.isEmpty ? [1] : Array(selectedOrdinals).sorted()
                 let weekdays = selectedWeekdays.isEmpty ? [2] : Array(selectedWeekdays).sorted()
                 if ordinals.count == 1,
                    weekdays.count == 1,
+                   hours.count == 1,
                    let ordinal = ordinals.first,
-                   let weekday = weekdays.first {
-                    draft.autoResetRule = .nthWeekday(ordinal: ordinal, weekday: weekday, hour: hour, minute: minute)
+                   let weekday = weekdays.first,
+                   let hour = hours.first {
+                    draft.autoResetRule = .nthWeekday(ordinal: ordinal, weekday: weekday, hour: hour, minute: 0)
+                } else if hours.count == 1, let hour = hours.first {
+                    draft.autoResetRule = .nthWeekdays(ordinals: ordinals, weekdays: weekdays, hour: hour, minute: 0)
                 } else {
-                    draft.autoResetRule = .nthWeekdays(ordinals: ordinals, weekdays: weekdays, hour: hour, minute: minute)
+                    draft.autoResetRule = .nthWeekdaysHours(ordinals: ordinals, weekdays: weekdays, hours: hours)
                 }
             }
         } else {
@@ -338,6 +374,39 @@ private struct ItemEditorView: View {
             set.remove(value)
         } else {
             set.insert(value)
+        }
+    }
+}
+
+private struct HourMultiSelectGrid: View {
+    @Binding var selectedHours: Set<Int>
+
+    private let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8), count: 4)
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(0..<24, id: \.self) { hour in
+                Button {
+                    toggle(hour)
+                } label: {
+                    Text("\(hour)時")
+                        .font(.caption.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(selectedHours.contains(hour) ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.12))
+                        .foregroundStyle(selectedHours.contains(hour) ? Color.accentColor : Color.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func toggle(_ hour: Int) {
+        if selectedHours.contains(hour) {
+            selectedHours.remove(hour)
+        } else {
+            selectedHours.insert(hour)
         }
     }
 }

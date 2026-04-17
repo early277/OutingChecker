@@ -185,13 +185,14 @@ private struct OutingWidgetTwoColumnView: View {
 
 private struct LockScreenCheckboxGridView: View {
     let entry: OutingEntry
+    private let checkboxSize: CGFloat = 11.4
 
     private var arrangedItems: [ChecklistItem?] {
         WidgetLayout.columnMajorItems(entry.items, columns: 4, rows: 4)
     }
 
     var body: some View {
-        let columns = Array(repeating: GridItem(.fixed(12), spacing: 3), count: 4)
+        let columns = Array(repeating: GridItem(.fixed(checkboxSize), spacing: 3), count: 4)
 
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -199,14 +200,14 @@ private struct LockScreenCheckboxGridView: View {
                 ForEach(0..<16, id: \.self) { index in
                     if let item = arrangedItems[index] {
                         Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: checkboxSize, weight: .semibold))
                             .foregroundStyle(item.isOn ? .green : .primary)
-                            .frame(width: 12, height: 12)
+                            .frame(width: checkboxSize, height: checkboxSize)
                     } else {
                         Image(systemName: "square")
-                            .font(.system(size: 12, weight: .regular))
+                            .font(.system(size: checkboxSize, weight: .regular))
                             .foregroundStyle(.secondary.opacity(0.2))
-                            .frame(width: 12, height: 12)
+                            .frame(width: checkboxSize, height: checkboxSize)
                     }
                 }
             }
