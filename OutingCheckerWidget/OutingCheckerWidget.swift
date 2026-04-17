@@ -79,21 +79,34 @@ struct OutingCheckerLockScreenPendingListWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenPendingListView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(小): 未達成4x1")
+        .configurationDisplayName("ロック画面(大): 未達成4x1")
         .description("未達成項目を4行1列で表示します。")
         .supportedFamilies([.accessoryRectangular])
     }
 }
 
-struct OutingCheckerLockScreenPendingGridWidget: Widget {
-    let kind = "OutingCheckerLockScreenPendingGridWidget"
+struct OutingCheckerLockScreenPendingTwoColumnWidget: Widget {
+    let kind = "OutingCheckerLockScreenPendingTwoColumnWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
-            LockScreenPendingGridView(entry: entry)
+            LockScreenPendingTwoColumnView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 未達成4x4")
-        .description("未達成項目を4行4列で表示します。")
+        .configurationDisplayName("ロック画面(大): 未達成4x2")
+        .description("未達成項目を4行2列で表示します。")
+        .supportedFamilies([.accessoryRectangular])
+    }
+}
+
+struct OutingCheckerLockScreenAllItemsGridWidget: Widget {
+    let kind = "OutingCheckerLockScreenAllItemsGridWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            LockScreenAllItemsGridView(entry: entry)
+        }
+        .configurationDisplayName("ロック画面(大): 全項目4x4")
+        .description("未達成/達成済みを4行4列で表示します。")
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -173,30 +186,32 @@ private struct OutingWidgetTwoColumnView: View {
 private struct LockScreenCheckboxGridView: View {
     let entry: OutingEntry
 
-    private var firstSixteenItems: [ChecklistItem] {
-        Array(entry.items.prefix(16))
+    private var arrangedItems: [ChecklistItem?] {
+        WidgetLayout.columnMajorItems(entry.items, columns: 4, rows: 4)
     }
 
     var body: some View {
-        let columns = Array(repeating: GridItem(.fixed(6), spacing: 2), count: 4)
+        let columns = Array(repeating: GridItem(.fixed(12), spacing: 3), count: 4)
 
-        ZStack {
-            Circle()
-                .fill(Color.clear)
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 4) {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            LazyVGrid(columns: columns, alignment: .center, spacing: 3) {
                 ForEach(0..<16, id: \.self) { index in
-                    if index < firstSixteenItems.count {
-                        Image(systemName: firstSixteenItems[index].isOn ? "checkmark.square.fill" : "square")
-                            .font(.system(size: 6, weight: .semibold))
-                            .foregroundStyle(firstSixteenItems[index].isOn ? .green : .secondary)
+                    if let item = arrangedItems[index] {
+                        Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(item.isOn ? .green : .primary)
+                            .frame(width: 12, height: 12)
                     } else {
                         Image(systemName: "square")
-                            .font(.system(size: 6, weight: .semibold))
+                            .font(.system(size: 12, weight: .regular))
                             .foregroundStyle(.secondary.opacity(0.2))
+                            .frame(width: 12, height: 12)
                     }
                 }
             }
-            .padding(4)
+            .frame(maxWidth: .infinity, alignment: .center)
+            Spacer(minLength: 0)
         }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
@@ -216,16 +231,9 @@ private struct LockScreenPendingListView: View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
-                    HStack(spacing: 4) {
-                        Image(systemName: "square")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(item.title)
-                            .font(.caption2)
-                            .lineLimit(1)
-                    }
+                    LockScreenItemRowView(item: item, fontSize: 10)
                 } else {
-                    Color.clear.frame(height: 12)
+                    Color.clear.frame(height: 10)
                 }
             }
         }
@@ -234,7 +242,7 @@ private struct LockScreenPendingListView: View {
     }
 }
 
-private struct LockScreenPendingGridView: View {
+private struct LockScreenPendingTwoColumnView: View {
     let entry: OutingEntry
 
     private var pendingItems: [ChecklistItem] {
@@ -242,22 +250,14 @@ private struct LockScreenPendingGridView: View {
     }
 
     var body: some View {
-        let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 4)
-        let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 4, rows: 4)
+        let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 2)
+        let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 2, rows: 4)
 
         LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
-                    HStack(spacing: 2) {
-                        Image(systemName: "square")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.secondary)
-                        Text(item.title)
-                            .font(.system(size: 8))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    LockScreenItemRowView(item: item, fontSize: 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Color.clear.frame(height: 10)
                 }
@@ -265,6 +265,45 @@ private struct LockScreenPendingGridView: View {
         }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
+
+private struct LockScreenAllItemsGridView: View {
+    let entry: OutingEntry
+
+    var body: some View {
+        let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 4)
+        let arranged = WidgetLayout.columnMajorItems(entry.items, columns: 4, rows: 4)
+
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
+            ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
+                if let item = slot {
+                    LockScreenItemRowView(item: item, fontSize: 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Color.clear.frame(height: 10)
+                }
+            }
+        }
+        .containerBackground(.clear, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
+
+private struct LockScreenItemRowView: View {
+    let item: ChecklistItem
+    let fontSize: CGFloat
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                .font(.system(size: fontSize, weight: .semibold))
+                .foregroundStyle(item.isOn ? .green : .secondary)
+            Text(item.title)
+                .font(.system(size: fontSize))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
     }
 }
 
