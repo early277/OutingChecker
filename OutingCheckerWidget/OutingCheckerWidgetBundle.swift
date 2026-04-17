@@ -6,6 +6,9 @@ struct OutingCheckerWidgetBundle: WidgetBundle {
     var body: some Widget {
         OutingCheckerWidget()
         OutingCheckerTwoColumnWidget()
-        OutingCheckerLockScreenWidget()
+        OutingCheckerLockScreenCheckboxGridWidget()
+        OutingCheckerLockScreenPendingListWidget()
+        OutingCheckerLockScreenPendingTwoColumnWidget()
+        OutingCheckerLockScreenAllItemsGridWidget()
     }
 }
