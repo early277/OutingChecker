@@ -53,6 +53,9 @@ enum ResetRule: Codable, Hashable {
     case nthWeekday(ordinal: Int, weekday: Int, hour: Int, minute: Int)
     case nthWeekdays(ordinals: [Int], weekdays: [Int], hour: Int, minute: Int)
     case nthWeekdaysHours(ordinals: [Int], weekdays: [Int], hours: [Int])
+    case nthWeekdayPreviousDay(ordinal: Int, weekday: Int, hour: Int, minute: Int)
+    case nthWeekdaysPreviousDay(ordinals: [Int], weekdays: [Int], hour: Int, minute: Int)
+    case nthWeekdaysHoursPreviousDay(ordinals: [Int], weekdays: [Int], hours: [Int])
 
     var summary: String {
         switch self {
@@ -72,6 +75,12 @@ enum ResetRule: Codable, Hashable {
             return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
         case let .nthWeekdaysHours(ordinals, weekdays, hours):
             return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays)) \(hourJapaneseList(hours))"
+        case let .nthWeekdayPreviousDay(ordinal, weekday, hour, minute):
+            return "毎月第\(ordinal)\(weekdayJapanese(weekday))の前日 \(String(format: "%02d:%02d", hour, minute))"
+        case let .nthWeekdaysPreviousDay(ordinals, weekdays, hour, minute):
+            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays))の前日 \(String(format: "%02d:%02d", hour, minute))"
+        case let .nthWeekdaysHoursPreviousDay(ordinals, weekdays, hours):
+            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays))の前日 \(hourJapaneseList(hours))"
         }
     }
 
