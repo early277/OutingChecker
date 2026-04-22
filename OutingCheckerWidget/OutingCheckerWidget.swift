@@ -111,6 +111,19 @@ struct OutingCheckerLockScreenPendingTwoColumnWidget: Widget {
     }
 }
 
+struct OutingCheckerLockScreenPendingThreeColumnWidget: Widget {
+    let kind = "OutingCheckerLockScreenPendingThreeColumnWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            LockScreenPendingThreeColumnView(entry: entry)
+        }
+        .configurationDisplayName("ロック画面(大): 未達成4x3")
+        .description("未達成項目を4行3列で表示します。")
+        .supportedFamilies([.accessoryRectangular])
+    }
+}
+
 struct OutingCheckerLockScreenAllItemsGridWidget: Widget {
     let kind = "OutingCheckerLockScreenAllItemsGridWidget"
 
@@ -270,7 +283,33 @@ private struct LockScreenPendingTwoColumnView: View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
-                    LockScreenItemRowView(item: item, fontSize: 8)
+                    LockScreenItemRowView(item: item, fontSize: 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Color.clear.frame(height: 10)
+                }
+            }
+        }
+        .containerBackground(.clear, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
+
+private struct LockScreenPendingThreeColumnView: View {
+    let entry: OutingEntry
+
+    private var pendingItems: [ChecklistItem] {
+        entry.items.filter { !$0.isOn }
+    }
+
+    var body: some View {
+        let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 3)
+        let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 3, rows: 4)
+
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
+            ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
+                if let item = slot {
+                    LockScreenItemRowView(item: item, fontSize: 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Color.clear.frame(height: 10)
@@ -292,7 +331,7 @@ private struct LockScreenAllItemsGridView: View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
-                    LockScreenItemRowView(item: item, fontSize: 8)
+                    LockScreenItemRowView(item: item, fontSize: 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Color.clear.frame(height: 10)

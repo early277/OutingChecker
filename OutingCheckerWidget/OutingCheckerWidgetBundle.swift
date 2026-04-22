@@ -10,6 +10,7 @@ struct OutingCheckerWidgetBundle: WidgetBundle {
         OutingCheckerLockScreenCheckboxGridWidget()
         OutingCheckerLockScreenPendingListWidget()
         OutingCheckerLockScreenPendingTwoColumnWidget()
+        OutingCheckerLockScreenPendingThreeColumnWidget()
         OutingCheckerLockScreenAllItemsGridWidget()
     }
 }
