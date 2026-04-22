@@ -59,6 +59,19 @@ struct OutingCheckerTwoColumnWidget: Widget {
     }
 }
 
+struct OutingCheckerPendingCheckboxDenseWidget: Widget {
+    let kind = "OutingCheckerPendingCheckboxDenseWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            OutingPendingCheckboxDenseView(entry: entry)
+        }
+        .configurationDisplayName("お出かけチェッカー (チェック・未達成優先)")
+        .description("未達成を先頭に、チェックボックスで多く表示します。")
+        .supportedFamilies([.systemMedium, .systemLarge])
+    }
+}
+
 struct OutingCheckerLockScreenCheckboxGridWidget: Widget {
     let kind = "OutingCheckerLockScreenCheckboxGridWidget"
 
@@ -94,6 +107,19 @@ struct OutingCheckerLockScreenPendingTwoColumnWidget: Widget {
         }
         .configurationDisplayName("ロック画面(大): 未達成4x2")
         .description("未達成項目を4行2列で表示します。")
+        .supportedFamilies([.accessoryRectangular])
+    }
+}
+
+struct OutingCheckerLockScreenPendingThreeColumnWidget: Widget {
+    let kind = "OutingCheckerLockScreenPendingThreeColumnWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            LockScreenPendingThreeColumnView(entry: entry)
+        }
+        .configurationDisplayName("ロック画面(大): 未達成4x3")
+        .description("未達成項目を4行3列で表示します。")
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -257,7 +283,33 @@ private struct LockScreenPendingTwoColumnView: View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
-                    LockScreenItemRowView(item: item, fontSize: 8)
+                    LockScreenItemRowView(item: item, fontSize: 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Color.clear.frame(height: 10)
+                }
+            }
+        }
+        .containerBackground(.clear, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
+
+private struct LockScreenPendingThreeColumnView: View {
+    let entry: OutingEntry
+
+    private var pendingItems: [ChecklistItem] {
+        entry.items.filter { !$0.isOn }
+    }
+
+    var body: some View {
+        let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 3)
+        let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 3, rows: 4)
+
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
+            ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
+                if let item = slot {
+                    LockScreenItemRowView(item: item, fontSize: 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Color.clear.frame(height: 10)
@@ -279,7 +331,7 @@ private struct LockScreenAllItemsGridView: View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
-                    LockScreenItemRowView(item: item, fontSize: 8)
+                    LockScreenItemRowView(item: item, fontSize: 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Color.clear.frame(height: 10)
@@ -288,6 +340,77 @@ private struct LockScreenAllItemsGridView: View {
         }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
+    }
+}
+
+private struct OutingPendingCheckboxDenseView: View {
+    let entry: OutingEntry
+    @Environment(\.widgetFamily) private var family
+
+    private var columns: [GridItem] {
+        [GridItem(.flexible(minimum: 0), spacing: 8), GridItem(.flexible(minimum: 0), spacing: 8)]
+    }
+
+    var body: some View {
+        let sortedItems = entry.items.sorted {
+            if $0.isOn == $1.isOn {
+                return $0.sortOrder < $1.sortOrder
+            }
+            return !$0.isOn && $1.isOn
+        }
+        let arranged = WidgetLayout.columnMajorItems(
+            sortedItems,
+            columns: 2,
+            rows: WidgetLayout.maxRowsForDenseCheckbox(family)
+        )
+        let visibleItems = arranged.compactMap { $0 }
+
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 6) {
+                ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
+                    if let item = slot {
+                        DenseWidgetCheckboxItem(item: item)
+                    } else {
+                        Color.clear
+                            .frame(maxWidth: .infinity, minHeight: 14)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(WidgetLayout.padding(family))
+        .containerBackground(.background, for: .widget)
+        .widgetURL(URL(string: "outingchecker://open"))
+        .overlay {
+            if visibleItems.isEmpty {
+                Text("項目がありません")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct DenseWidgetCheckboxItem: View {
+    let item: ChecklistItem
+
+    var body: some View {
+        Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
+            HStack(spacing: 4) {
+                Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(item.isOn ? .secondary : .primary)
+                Text(item.title)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .foregroundStyle(item.isOn ? .secondary : .primary)
+                Spacer(minLength: 0)
+            }
+            .opacity(item.isOn ? 0.6 : 1.0)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -364,6 +487,14 @@ private enum WidgetLayout {
     }
 
     static func maxItemsForTwoColumn(_ family: WidgetFamily) -> Int {
+        switch family {
+        case .systemMedium: return 8
+        case .systemLarge: return 16
+        default: return 8
+        }
+    }
+
+    static func maxRowsForDenseCheckbox(_ family: WidgetFamily) -> Int {
         switch family {
         case .systemMedium: return 8
         case .systemLarge: return 16

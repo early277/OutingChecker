@@ -188,6 +188,7 @@ private struct ItemEditorView: View {
     @State private var selectedWeekdays: Set<Int>
     @State private var selectedOrdinals: Set<Int>
     @State private var selectedHours: Set<Int>
+    @State private var usePreviousDayForNthWeekday: Bool
 
     init(item: ChecklistItem, onSave: @escaping (ChecklistItem) -> Void) {
         _draft = State(initialValue: item)
@@ -195,6 +196,7 @@ private struct ItemEditorView: View {
 
         let initialRule = item.autoResetRule ?? .daily(hour: 5, minute: 0)
         _autoResetEnabled = State(initialValue: item.autoResetRule != nil)
+        _usePreviousDayForNthWeekday = State(initialValue: false)
 
         switch initialRule {
         case let .daily(hour, _):
@@ -237,6 +239,24 @@ private struct ItemEditorView: View {
             _selectedWeekdays = State(initialValue: Set(weekdays))
             _selectedOrdinals = State(initialValue: Set(ordinals))
             _selectedHours = State(initialValue: Set(hours))
+        case let .nthWeekdayPreviousDay(ordinal, weekday, hour, _):
+            _selectedRuleMode = State(initialValue: .nthWeekday)
+            _selectedWeekdays = State(initialValue: [weekday])
+            _selectedOrdinals = State(initialValue: [ordinal])
+            _selectedHours = State(initialValue: [hour])
+            _usePreviousDayForNthWeekday = State(initialValue: true)
+        case let .nthWeekdaysPreviousDay(ordinals, weekdays, hour, _):
+            _selectedRuleMode = State(initialValue: .nthWeekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: Set(ordinals))
+            _selectedHours = State(initialValue: [hour])
+            _usePreviousDayForNthWeekday = State(initialValue: true)
+        case let .nthWeekdaysHoursPreviousDay(ordinals, weekdays, hours):
+            _selectedRuleMode = State(initialValue: .nthWeekday)
+            _selectedWeekdays = State(initialValue: Set(weekdays))
+            _selectedOrdinals = State(initialValue: Set(ordinals))
+            _selectedHours = State(initialValue: Set(hours))
+            _usePreviousDayForNthWeekday = State(initialValue: true)
         }
     }
 
@@ -263,14 +283,11 @@ private struct ItemEditorView: View {
                                 Text("曜日（複数選択）")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                ForEach(weekdayOptions, id: \.value) { option in
-                                    MultiSelectRow(
-                                        title: option.title,
-                                        isSelected: selectedWeekdays.contains(option.value)
-                                    ) {
-                                        toggleSelection(option.value, in: &selectedWeekdays)
-                                    }
-                                }
+                                ChoiceChipGrid(
+                                    options: weekdayOptions,
+                                    selectedValues: $selectedWeekdays,
+                                    columns: 4
+                                )
                             }
                         }
 
@@ -279,14 +296,13 @@ private struct ItemEditorView: View {
                                 Text("第何（複数選択）")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                ForEach(1...5, id: \.self) { value in
-                                    MultiSelectRow(
-                                        title: "第\(value)",
-                                        isSelected: selectedOrdinals.contains(value)
-                                    ) {
-                                        toggleSelection(value, in: &selectedOrdinals)
-                                    }
-                                }
+                                ChoiceChipGrid(
+                                    options: (1...5).map { (value: $0, title: "第\($0)") },
+                                    selectedValues: $selectedOrdinals,
+                                    columns: 5
+                                )
+                                Toggle("前日", isOn: $usePreviousDayForNthWeekday)
+                                    .font(.caption)
                             }
                         }
 
@@ -348,11 +364,17 @@ private struct ItemEditorView: View {
                    let ordinal = ordinals.first,
                    let weekday = weekdays.first,
                    let hour = hours.first {
-                    draft.autoResetRule = .nthWeekday(ordinal: ordinal, weekday: weekday, hour: hour, minute: 0)
+                    draft.autoResetRule = usePreviousDayForNthWeekday
+                    ? .nthWeekdayPreviousDay(ordinal: ordinal, weekday: weekday, hour: hour, minute: 0)
+                    : .nthWeekday(ordinal: ordinal, weekday: weekday, hour: hour, minute: 0)
                 } else if hours.count == 1, let hour = hours.first {
-                    draft.autoResetRule = .nthWeekdays(ordinals: ordinals, weekdays: weekdays, hour: hour, minute: 0)
+                    draft.autoResetRule = usePreviousDayForNthWeekday
+                    ? .nthWeekdaysPreviousDay(ordinals: ordinals, weekdays: weekdays, hour: hour, minute: 0)
+                    : .nthWeekdays(ordinals: ordinals, weekdays: weekdays, hour: hour, minute: 0)
                 } else {
-                    draft.autoResetRule = .nthWeekdaysHours(ordinals: ordinals, weekdays: weekdays, hours: hours)
+                    draft.autoResetRule = usePreviousDayForNthWeekday
+                    ? .nthWeekdaysHoursPreviousDay(ordinals: ordinals, weekdays: weekdays, hours: hours)
+                    : .nthWeekdaysHours(ordinals: ordinals, weekdays: weekdays, hours: hours)
                 }
             }
         } else {
@@ -369,13 +391,6 @@ private struct ItemEditorView: View {
         ]
     }
 
-    private func toggleSelection(_ value: Int, in set: inout Set<Int>) {
-        if set.contains(value) {
-            set.remove(value)
-        } else {
-            set.insert(value)
-        }
-    }
 }
 
 private struct HourMultiSelectGrid: View {
@@ -411,22 +426,42 @@ private struct HourMultiSelectGrid: View {
     }
 }
 
-private struct MultiSelectRow: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
+private struct ChoiceChipGrid: View {
+    let options: [(value: Int, title: String)]
+    @Binding var selectedValues: Set<Int>
+    let columns: Int
 
     var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                Text(title)
-                    .foregroundStyle(.primary)
-                Spacer()
+        let gridColumns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8), count: columns)
+
+        LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 8) {
+            ForEach(options, id: \.value) { option in
+                Button {
+                    toggle(option.value)
+                } label: {
+                    Text(option.title)
+                        .font(.caption.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            selectedValues.contains(option.value)
+                            ? Color.accentColor.opacity(0.2)
+                            : Color.secondary.opacity(0.12)
+                        )
+                        .foregroundStyle(selectedValues.contains(option.value) ? Color.accentColor : Color.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
             }
         }
-        .buttonStyle(.plain)
+    }
+
+    private func toggle(_ value: Int) {
+        if selectedValues.contains(value) {
+            selectedValues.remove(value)
+        } else {
+            selectedValues.insert(value)
+        }
     }
 }
 

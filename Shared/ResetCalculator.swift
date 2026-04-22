@@ -26,12 +26,12 @@ enum ResetCalculator {
             }
             return candidates.max()
         case let .nthWeekday(ordinal, weekday, hour, minute):
-            return latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, calendar: calendar)
+            return latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, dayOffset: 0, calendar: calendar)
         case let .nthWeekdays(ordinals, weekdays, hour, minute):
             var candidates: [Date] = []
             for ordinal in ordinals {
                 for weekday in weekdays {
-                    if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, calendar: calendar) {
+                    if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, dayOffset: 0, calendar: calendar) {
                         candidates.append(candidate)
                     }
                 }
@@ -42,7 +42,31 @@ enum ResetCalculator {
             for ordinal in ordinals {
                 for weekday in weekdays {
                     for hour in hours {
-                        if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: 0, calendar: calendar) {
+                        if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: 0, dayOffset: 0, calendar: calendar) {
+                            candidates.append(candidate)
+                        }
+                    }
+                }
+            }
+            return candidates.max()
+        case let .nthWeekdayPreviousDay(ordinal, weekday, hour, minute):
+            return latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, dayOffset: -1, calendar: calendar)
+        case let .nthWeekdaysPreviousDay(ordinals, weekdays, hour, minute):
+            var candidates: [Date] = []
+            for ordinal in ordinals {
+                for weekday in weekdays {
+                    if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, dayOffset: -1, calendar: calendar) {
+                        candidates.append(candidate)
+                    }
+                }
+            }
+            return candidates.max()
+        case let .nthWeekdaysHoursPreviousDay(ordinals, weekdays, hours):
+            var candidates: [Date] = []
+            for ordinal in ordinals {
+                for weekday in weekdays {
+                    for hour in hours {
+                        if let candidate = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: 0, dayOffset: -1, calendar: calendar) {
                             candidates.append(candidate)
                         }
                     }
@@ -75,10 +99,26 @@ enum ResetCalculator {
         return nil
     }
 
-    private static func latestNthWeekdayTrigger(beforeOrAt now: Date, ordinal: Int, weekday: Int, hour: Int, minute: Int, calendar: Calendar) -> Date? {
+    private static func latestNthWeekdayTrigger(
+        beforeOrAt now: Date,
+        ordinal: Int,
+        weekday: Int,
+        hour: Int,
+        minute: Int,
+        dayOffset: Int,
+        calendar: Calendar
+    ) -> Date? {
         for monthOffset in 0..<24 {
             guard let month = calendar.date(byAdding: .month, value: -monthOffset, to: now),
-                  let candidate = nthWeekdayDate(inSameMonthAs: month, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, calendar: calendar) else {
+                  let candidate = nthWeekdayDate(
+                    inSameMonthAs: month,
+                    ordinal: ordinal,
+                    weekday: weekday,
+                    hour: hour,
+                    minute: minute,
+                    dayOffset: dayOffset,
+                    calendar: calendar
+                  ) else {
                 continue
             }
             if candidate <= now {
@@ -88,7 +128,15 @@ enum ResetCalculator {
         return nil
     }
 
-    private static func nthWeekdayDate(inSameMonthAs date: Date, ordinal: Int, weekday: Int, hour: Int, minute: Int, calendar: Calendar) -> Date? {
+    private static func nthWeekdayDate(
+        inSameMonthAs date: Date,
+        ordinal: Int,
+        weekday: Int,
+        hour: Int,
+        minute: Int,
+        dayOffset: Int,
+        calendar: Calendar
+    ) -> Date? {
         let comps = calendar.dateComponents([.year, .month], from: date)
         guard let monthStart = calendar.date(from: comps),
               let range = calendar.range(of: .day, in: .month, for: monthStart) else { return nil }
@@ -103,6 +151,9 @@ enum ResetCalculator {
 
         guard ordinal >= 1, ordinal <= matches.count else { return nil }
         let base = matches[ordinal - 1]
-        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: base)
+        guard let adjustedBase = calendar.date(byAdding: .day, value: dayOffset, to: base) else {
+            return nil
+        }
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: adjustedBase)
     }
 }
