@@ -196,6 +196,7 @@ private struct ItemEditorView: View {
 
         let initialRule = item.autoResetRule ?? .daily(hour: 5, minute: 0)
         _autoResetEnabled = State(initialValue: item.autoResetRule != nil)
+        _usePreviousDayForNthWeekday = State(initialValue: false)
 
         switch initialRule {
         case let .daily(hour, _):
@@ -228,19 +229,16 @@ private struct ItemEditorView: View {
             _selectedWeekdays = State(initialValue: [weekday])
             _selectedOrdinals = State(initialValue: [ordinal])
             _selectedHours = State(initialValue: [hour])
-            _usePreviousDayForNthWeekday = State(initialValue: false)
         case let .nthWeekdays(ordinals, weekdays, hour, _):
             _selectedRuleMode = State(initialValue: .nthWeekday)
             _selectedWeekdays = State(initialValue: Set(weekdays))
             _selectedOrdinals = State(initialValue: Set(ordinals))
             _selectedHours = State(initialValue: [hour])
-            _usePreviousDayForNthWeekday = State(initialValue: false)
         case let .nthWeekdaysHours(ordinals, weekdays, hours):
             _selectedRuleMode = State(initialValue: .nthWeekday)
             _selectedWeekdays = State(initialValue: Set(weekdays))
             _selectedOrdinals = State(initialValue: Set(ordinals))
             _selectedHours = State(initialValue: Set(hours))
-            _usePreviousDayForNthWeekday = State(initialValue: false)
         case let .nthWeekdayPreviousDay(ordinal, weekday, hour, _):
             _selectedRuleMode = State(initialValue: .nthWeekday)
             _selectedWeekdays = State(initialValue: [weekday])
@@ -259,8 +257,6 @@ private struct ItemEditorView: View {
             _selectedOrdinals = State(initialValue: Set(ordinals))
             _selectedHours = State(initialValue: Set(hours))
             _usePreviousDayForNthWeekday = State(initialValue: true)
-        case .daily, .dailyHours, .weekday, .weekdays, .weekdaysHours:
-            _usePreviousDayForNthWeekday = State(initialValue: false)
         }
     }
 
