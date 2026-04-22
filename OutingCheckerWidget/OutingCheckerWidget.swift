@@ -66,8 +66,8 @@ struct OutingCheckerPendingCheckboxDenseWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             OutingPendingCheckboxDenseView(entry: entry)
         }
-        .configurationDisplayName("お出かけチェッカー (チェック・未達成優先)")
-        .description("未達成を先頭に、チェックボックスで多く表示します。")
+        .configurationDisplayName("お出かけチェッカー (チェック・高密度)")
+        .description("項目をそのままの順で、チェックボックスで多く表示します。")
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -352,14 +352,8 @@ private struct OutingPendingCheckboxDenseView: View {
     }
 
     var body: some View {
-        let sortedItems = entry.items.sorted {
-            if $0.isOn == $1.isOn {
-                return $0.sortOrder < $1.sortOrder
-            }
-            return !$0.isOn && $1.isOn
-        }
         let arranged = WidgetLayout.columnMajorItems(
-            sortedItems,
+            entry.items,
             columns: 2,
             rows: WidgetLayout.maxRowsForDenseCheckbox(family)
         )
@@ -402,7 +396,7 @@ private struct DenseWidgetCheckboxItem: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(item.isOn ? .secondary : .primary)
                 Text(item.title)
-                    .font(.system(size: 11))
+                    .font(.system(size: 13.2))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(item.isOn ? .secondary : .primary)
@@ -496,9 +490,9 @@ private enum WidgetLayout {
 
     static func maxRowsForDenseCheckbox(_ family: WidgetFamily) -> Int {
         switch family {
-        case .systemMedium: return 8
-        case .systemLarge: return 16
-        default: return 8
+        case .systemMedium: return 6
+        case .systemLarge: return 12
+        default: return 6
         }
     }
 
