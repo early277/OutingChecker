@@ -396,7 +396,7 @@ private struct DenseWidgetCheckboxItem: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(item.isOn ? .secondary : .primary)
                 Text(item.title)
-                    .font(.system(size: 11))
+                    .font(.system(size: 13.2))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(item.isOn ? .secondary : .primary)
