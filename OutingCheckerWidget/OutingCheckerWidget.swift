@@ -40,8 +40,8 @@ struct OutingCheckerWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             OutingWidgetListView(entry: entry)
         }
-        .configurationDisplayName("お出かけチェッカー")
-        .description("ウィジェット上で直接 ON/OFF を切り替えます。")
+        .configurationDisplayName(L10n.text("お出かけチェッカー", "Outing Checker", "외출 체크"))
+        .description(L10n.text("ウィジェット上で直接 ON/OFF を切り替えます。", "Toggle items directly on the widget.", "위젯에서 항목을 직접 ON/OFF 전환합니다."))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -53,8 +53,8 @@ struct OutingCheckerTwoColumnWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             OutingWidgetTwoColumnView(entry: entry)
         }
-        .configurationDisplayName("お出かけチェッカー (2列)")
-        .description("2列レイアウトで項目を表示します。")
+        .configurationDisplayName(L10n.text("お出かけチェッカー (2列)", "Outing Checker (2 columns)", "외출 체크 (2열)"))
+        .description(L10n.text("2列レイアウトで項目を表示します。", "Show items in a two-column layout.", "2열 레이아웃으로 항목을 표시합니다."))
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -66,8 +66,8 @@ struct OutingCheckerPendingCheckboxDenseWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             OutingPendingCheckboxDenseView(entry: entry)
         }
-        .configurationDisplayName("お出かけチェッカー (チェック・高密度)")
-        .description("項目をそのままの順で、チェックボックスで多く表示します。")
+        .configurationDisplayName(L10n.text("お出かけチェッカー (チェック・高密度)", "Outing Checker (Dense Checks)", "외출 체크 (고밀도 체크)"))
+        .description(L10n.text("項目をそのままの順で、チェックボックスで多く表示します。", "Show more items with checkboxes in a dense layout.", "체크박스와 함께 더 많은 항목을 고밀도로 표시합니다."))
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -79,8 +79,8 @@ struct OutingCheckerLockScreenCheckboxGridWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenCheckboxGridView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(小): チェック4x4")
-        .description("項目数分のチェックボックスを4行4列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(小): チェック4x4", "Lock Screen (S): Checks 4x4", "잠금화면(소): 체크 4x4"))
+        .description(L10n.text("項目数分のチェックボックスを4行4列で表示します。", "Show checkboxes in a 4x4 grid.", "체크박스를 4x4 그리드로 표시합니다."))
         .supportedFamilies([.accessoryCircular])
     }
 }
@@ -92,8 +92,8 @@ struct OutingCheckerLockScreenPendingListWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenPendingListView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 未達成4x1")
-        .description("未達成項目を4行1列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 未達成4x1", "Lock Screen (L): Pending 4x1", "잠금화면(대): 미완료 4x1"))
+        .description(L10n.text("未達成項目を4行1列で表示します。", "Show pending items in 4 rows and 1 column.", "미완료 항목을 4행 1열로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -105,8 +105,8 @@ struct OutingCheckerLockScreenPendingTwoColumnWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenPendingTwoColumnView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 未達成4x2")
-        .description("未達成項目を4行2列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 未達成4x2", "Lock Screen (L): Pending 4x2", "잠금화면(대): 미완료 4x2"))
+        .description(L10n.text("未達成項目を4行2列で表示します。", "Show pending items in 4 rows and 2 columns.", "미완료 항목을 4행 2열로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -118,8 +118,8 @@ struct OutingCheckerLockScreenPendingThreeColumnWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenPendingThreeColumnView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 未達成4x3")
-        .description("未達成項目を4行3列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 未達成4x3", "Lock Screen (L): Pending 4x3", "잠금화면(대): 미완료 4x3"))
+        .description(L10n.text("未達成項目を4行3列で表示します。", "Show pending items in 4 rows and 3 columns.", "미완료 항목을 4행 3열로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -131,8 +131,8 @@ struct OutingCheckerLockScreenAllItemsGridWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenAllItemsGridView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 全項目4x4")
-        .description("未達成/達成済みを4行4列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 全項目4x4", "Lock Screen (L): All items 4x4", "잠금화면(대): 전체 항목 4x4"))
+        .description(L10n.text("未達成/達成済みを4行4列で表示します。", "Show all items (done/pending) in a 4x4 grid.", "완료/미완료 전체 항목을 4x4 그리드로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -489,7 +489,7 @@ private struct WidgetSwitchView: View {
             RoundedRectangle(cornerRadius: compact ? 12 : 14)
                 .fill(isOn ? Color.green.opacity(0.9) : Color.gray.opacity(0.45))
                 .frame(width: compact ? 40 : 50, height: compact ? 22 : 28)
-            Text(isOn ? L10n.text("済", "Done", "완료") : L10n.text("未", "Todo", "미완료"))
+            Text(isOn ? "○" : "×")
                 .font(compact ? .caption2.bold() : .caption.weight(.bold))
                 .foregroundStyle(.white)
                 .offset(x: isOn ? (compact ? -7 : -9) : (compact ? 7 : 9))

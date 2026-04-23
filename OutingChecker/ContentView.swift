@@ -530,7 +530,7 @@ private struct SwitchPreview: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(isOn ? Color.green.opacity(0.85) : Color.gray.opacity(0.5))
                 .frame(width: 52, height: 30)
-            Text(isOn ? L10n.text("済", "Done", "완료") : L10n.text("未", "Not done", "미완료"))
+            Text(isOn ? "○" : "×")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white)
                 .offset(x: isOn ? -9 : 9)
