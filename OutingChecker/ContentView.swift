@@ -18,14 +18,14 @@ struct ContentView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(isEditing ? "完了" : "編集") {
+                        Button(isEditing ? L10n.text("完了", "Done", "완료") : L10n.text("編集", "Edit", "편집")) {
                             withAnimation {
                                 editMode = isEditing ? .inactive : .active
                             }
                         }
                     }
                     ToolbarItem(placement: .principal) {
-                        Text("おでかけチェッカーウィジェット")
+                        Text(L10n.text("おでかけチェッカーウィジェット", "Outing Checker Widget", "외출 체크 위젯"))
                             .font(.headline.weight(.semibold))
                             .scaleEffect(0.6)
                             .lineLimit(1)
@@ -48,22 +48,22 @@ struct ContentView: View {
 
     private var contentForm: some View {
         Form {
-            Section("項目") {
+            Section(L10n.text("項目", "Items", "항목")) {
                 addItemRow
 
                 if items.isEmpty {
-                    Text("項目がありません")
+                    Text(L10n.text("項目がありません", "No items", "항목이 없습니다"))
                         .foregroundStyle(.secondary)
                 } else {
                     itemList
                 }
             }
 
-            Section("アプリ") {
+            Section(L10n.text("アプリ", "App", "앱")) {
                 Button(role: .destructive) {
                     quitApp()
                 } label: {
-                    Text("アプリを終了")
+                    Text(L10n.text("アプリを終了", "Quit App", "앱 종료"))
                 }
             }
         }
@@ -71,8 +71,8 @@ struct ContentView: View {
 
     private var addItemRow: some View {
         HStack {
-            TextField("新しい項目", text: $newTitle)
-            Button("追加", action: addItem)
+            TextField(L10n.text("新しい項目", "New item", "새 항목"), text: $newTitle)
+            Button(L10n.text("追加", "Add", "추가"), action: addItem)
                 .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
     }
@@ -86,16 +86,16 @@ struct ContentView: View {
                     SwitchPreview(isOn: item.isOn)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(item.title) を\(item.isOn ? "オフ" : "オン")にする")
+                .accessibilityLabel("\(item.title) \(item.isOn ? L10n.text("をオフにする", "turn off", "끄기") : L10n.text("をオンにする", "turn on", "켜기"))")
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
-                    Text(item.autoResetRule?.summary ?? "自動リセットなし")
+                    Text(item.autoResetRule?.summary ?? L10n.text("自動リセットなし", "No auto reset", "자동 리셋 없음"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("編集") {
+                Button(L10n.text("編集", "Edit", "편집")) {
                     editingItem = item
                 }
             }
@@ -178,6 +178,17 @@ private struct ItemEditorView: View {
         case weekday = "曜日"
         case nthWeekday = "第n曜日"
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .daily:
+                return L10n.text("毎日", "Daily", "매일")
+            case .weekday:
+                return L10n.text("曜日", "Weekday", "요일")
+            case .nthWeekday:
+                return L10n.text("第n曜日", "Nth weekday", "n번째 요일")
+            }
+        }
     }
 
     @State private var draft: ChecklistItem
@@ -263,51 +274,46 @@ private struct ItemEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("項目名") {
-                    TextField("項目名", text: $draft.title)
+                Section(L10n.text("項目名", "Item name", "항목명")) {
+                    TextField(L10n.text("項目名", "Item name", "항목명"), text: $draft.title)
                 }
 
-                Section("自動リセット") {
-                    Toggle("有効", isOn: $autoResetEnabled)
+                Section(L10n.text("自動リセット", "Auto reset", "자동 리셋")) {
+                    Toggle(L10n.text("有効", "Enabled", "사용"), isOn: $autoResetEnabled)
 
                     if autoResetEnabled {
-                        Picker("方式", selection: $selectedRuleMode) {
+                        Picker(L10n.text("方式", "Mode", "방식"), selection: $selectedRuleMode) {
                             ForEach(RuleMode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
+                                Text(mode.title).tag(mode)
                             }
                         }
                         .pickerStyle(.segmented)
 
                         if selectedRuleMode == .weekday || selectedRuleMode == .nthWeekday {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("曜日（複数選択）")
+                                Text(L10n.text("曜日（複数選択）", "Weekdays (multi-select)", "요일(복수 선택)"))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                ChoiceChipGrid(
-                                    options: weekdayOptions,
-                                    selectedValues: $selectedWeekdays,
-                                    columns: 4
-                                )
+                                WeekdaySelectionView(options: weekdayOptions, selectedValues: $selectedWeekdays)
                             }
                         }
 
                         if selectedRuleMode == .nthWeekday {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("第何（複数選択）")
+                                Text(L10n.text("第何（複数選択）", "Nth (multi-select)", "몇째(복수 선택)"))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 ChoiceChipGrid(
-                                    options: (1...5).map { (value: $0, title: "第\($0)") },
+                                    options: (1...5).map { (value: $0, title: ordinalLabel($0)) },
                                     selectedValues: $selectedOrdinals,
                                     columns: 5
                                 )
-                                Toggle("前日", isOn: $usePreviousDayForNthWeekday)
-                                    .font(.caption)
+                                Toggle(L10n.text("前日", "Previous day", "전날"), isOn: $usePreviousDayForNthWeekday)
                             }
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("時刻（複数選択）")
+                            Text(L10n.text("時刻（複数選択）", "Hours (multi-select)", "시간(복수 선택)"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             HourMultiSelectGrid(selectedHours: $selectedHours)
@@ -315,13 +321,13 @@ private struct ItemEditorView: View {
                     }
                 }
             }
-            .navigationTitle("項目を編集")
+            .navigationTitle(L10n.text("項目を編集", "Edit Item", "항목 편집"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("キャンセル") { dismiss() }
+                    Button(L10n.text("キャンセル", "Cancel", "취소")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button(L10n.text("保存", "Save", "저장")) {
                         save()
                         dismiss()
                     }
@@ -386,9 +392,25 @@ private struct ItemEditorView: View {
 
     private var weekdayOptions: [(value: Int, title: String)] {
         [
-            (1, "日曜"), (2, "月曜"), (3, "火曜"), (4, "水曜"),
-            (5, "木曜"), (6, "金曜"), (7, "土曜")
+            (2, L10n.text("月", "Mon", "월")),
+            (3, L10n.text("火", "Tue", "화")),
+            (4, L10n.text("水", "Wed", "수")),
+            (5, L10n.text("木", "Thu", "목")),
+            (6, L10n.text("金", "Fri", "금")),
+            (7, L10n.text("土", "Sat", "토")),
+            (1, L10n.text("日", "Sun", "일"))
         ]
+    }
+
+    private func ordinalLabel(_ value: Int) -> String {
+        switch AppLanguage.current {
+        case .japanese:
+            return "第\(value)"
+        case .english:
+            return "\(value)th"
+        case .korean:
+            return "\(value)번째"
+        }
     }
 
 }
@@ -404,7 +426,7 @@ private struct HourMultiSelectGrid: View {
                 Button {
                     toggle(hour)
                 } label: {
-                    Text("\(hour)時")
+                    Text(hourLabel(hour))
                         .font(.caption.weight(.medium))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
@@ -424,17 +446,51 @@ private struct HourMultiSelectGrid: View {
             selectedHours.insert(hour)
         }
     }
+
+    private func hourLabel(_ hour: Int) -> String {
+        switch AppLanguage.current {
+        case .japanese:
+            return "\(hour)時"
+        case .english:
+            return "\(hour):00"
+        case .korean:
+            return "\(hour)시"
+        }
+    }
+}
+
+private struct WeekdaySelectionView: View {
+    let options: [(value: Int, title: String)]
+    @Binding var selectedValues: Set<Int>
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ChoiceChipGrid(
+                options: Array(options.prefix(5)),
+                selectedValues: $selectedValues,
+                columns: 5,
+                isCentered: true
+            )
+            ChoiceChipGrid(
+                options: Array(options.suffix(2)),
+                selectedValues: $selectedValues,
+                columns: 2,
+                isCentered: true
+            )
+        }
+    }
 }
 
 private struct ChoiceChipGrid: View {
     let options: [(value: Int, title: String)]
     @Binding var selectedValues: Set<Int>
     let columns: Int
+    var isCentered: Bool = false
 
     var body: some View {
         let gridColumns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8), count: columns)
 
-        LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 8) {
+        LazyVGrid(columns: gridColumns, alignment: .center, spacing: 8) {
             ForEach(options, id: \.value) { option in
                 Button {
                     toggle(option.value)
@@ -454,6 +510,7 @@ private struct ChoiceChipGrid: View {
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
     }
 
     private func toggle(_ value: Int) {
@@ -473,7 +530,7 @@ private struct SwitchPreview: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(isOn ? Color.green.opacity(0.85) : Color.gray.opacity(0.5))
                 .frame(width: 52, height: 30)
-            Text(isOn ? "済" : "未")
+            Text(isOn ? L10n.text("済", "Done", "완료") : L10n.text("未", "Todo", "미완료"))
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white)
                 .offset(x: isOn ? -9 : 9)

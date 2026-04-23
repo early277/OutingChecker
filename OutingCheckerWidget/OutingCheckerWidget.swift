@@ -157,7 +157,7 @@ private struct OutingWidgetListView: View {
                 }
 
                 if visibleItems.isEmpty {
-                    Text("項目がありません")
+                    Text(L10n.text("項目がありません", "No items", "항목이 없습니다"))
                         .font(WidgetLayout.font(family))
                         .foregroundStyle(.secondary)
                 }
@@ -197,7 +197,7 @@ private struct OutingWidgetTwoColumnView: View {
                 }
 
                 if visibleItems.isEmpty {
-                    Text("項目がありません")
+                    Text(L10n.text("項目がありません", "No items", "항목이 없습니다"))
                         .font(WidgetLayout.font(family))
                         .foregroundStyle(.secondary)
                 }
@@ -252,6 +252,10 @@ private struct LockScreenPendingListView: View {
         entry.items.filter { !$0.isOn }
     }
 
+    private var allCompleted: Bool {
+        !entry.items.isEmpty && pendingItems.isEmpty
+    }
+
     var body: some View {
         let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 1, rows: 4)
 
@@ -264,6 +268,13 @@ private struct LockScreenPendingListView: View {
                 }
             }
         }
+        .overlay {
+            if allCompleted {
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
     }
@@ -274,6 +285,10 @@ private struct LockScreenPendingTwoColumnView: View {
 
     private var pendingItems: [ChecklistItem] {
         entry.items.filter { !$0.isOn }
+    }
+
+    private var allCompleted: Bool {
+        !entry.items.isEmpty && pendingItems.isEmpty
     }
 
     var body: some View {
@@ -290,6 +305,13 @@ private struct LockScreenPendingTwoColumnView: View {
                 }
             }
         }
+        .overlay {
+            if allCompleted {
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
     }
@@ -300,6 +322,10 @@ private struct LockScreenPendingThreeColumnView: View {
 
     private var pendingItems: [ChecklistItem] {
         entry.items.filter { !$0.isOn }
+    }
+
+    private var allCompleted: Bool {
+        !entry.items.isEmpty && pendingItems.isEmpty
     }
 
     var body: some View {
@@ -314,6 +340,13 @@ private struct LockScreenPendingThreeColumnView: View {
                 } else {
                     Color.clear.frame(height: 10)
                 }
+            }
+        }
+        .overlay {
+            if allCompleted {
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
             }
         }
         .containerBackground(.clear, for: .widget)
@@ -378,7 +411,7 @@ private struct OutingPendingCheckboxDenseView: View {
         .widgetURL(URL(string: "outingchecker://open"))
         .overlay {
             if visibleItems.isEmpty {
-                Text("項目がありません")
+                Text(L10n.text("項目がありません", "No items", "항목이 없습니다"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -456,7 +489,7 @@ private struct WidgetSwitchView: View {
             RoundedRectangle(cornerRadius: compact ? 12 : 14)
                 .fill(isOn ? Color.green.opacity(0.9) : Color.gray.opacity(0.45))
                 .frame(width: compact ? 40 : 50, height: compact ? 22 : 28)
-            Text(isOn ? "済" : "未")
+            Text(isOn ? L10n.text("済", "Done", "완료") : L10n.text("未", "Todo", "미완료"))
                 .font(compact ? .caption2.bold() : .caption.weight(.bold))
                 .foregroundStyle(.white)
                 .offset(x: isOn ? (compact ? -7 : -9) : (compact ? 7 : 9))
@@ -466,7 +499,7 @@ private struct WidgetSwitchView: View {
                 .offset(x: isOn ? (compact ? 9 : 11) : (compact ? -9 : -11))
                 .shadow(radius: 1)
         }
-        .accessibilityLabel(isOn ? "オン" : "オフ")
+        .accessibilityLabel(isOn ? L10n.text("オン", "On", "켜짐") : L10n.text("オフ", "Off", "꺼짐"))
     }
 }
 
