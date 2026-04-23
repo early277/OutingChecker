@@ -429,7 +429,7 @@ private struct DenseWidgetCheckboxItem: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(item.isOn ? .secondary : .primary)
                 Text(item.title)
-                    .font(.system(size: 16.5))
+                    .font(.system(size: 15.0))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(item.isOn ? .secondary : .primary)
@@ -489,7 +489,7 @@ private struct WidgetSwitchView: View {
             RoundedRectangle(cornerRadius: compact ? 12 : 14)
                 .fill(isOn ? Color.green.opacity(0.9) : Color.gray.opacity(0.45))
                 .frame(width: compact ? 40 : 50, height: compact ? 22 : 28)
-            Text(isOn ? "○" : "×")
+            Text(switchMarkText)
                 .font(.system(size: compact ? 11 : 12, weight: .bold))
                 .foregroundStyle(.white)
                 .offset(x: isOn ? (compact ? -8 : -11) : (compact ? 8 : 11))
@@ -500,6 +500,13 @@ private struct WidgetSwitchView: View {
                 .shadow(radius: 1)
         }
         .accessibilityLabel(isOn ? L10n.text("オン", "On", "켜짐") : L10n.text("オフ", "Off", "꺼짐"))
+    }
+
+    private var switchMarkText: String {
+        if AppLanguage.current == .japanese {
+            return isOn ? "済" : "未"
+        }
+        return isOn ? "○" : "×"
     }
 }
 

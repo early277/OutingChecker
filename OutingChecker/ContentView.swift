@@ -530,7 +530,7 @@ private struct SwitchPreview: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(isOn ? Color.green.opacity(0.85) : Color.gray.opacity(0.5))
                 .frame(width: 52, height: 30)
-            Text(isOn ? "○" : "×")
+            Text(switchMarkText)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(.white)
                 .offset(x: isOn ? -11 : 11)
@@ -540,5 +540,12 @@ private struct SwitchPreview: View {
                 .offset(x: isOn ? 11 : -11)
                 .shadow(radius: 1)
         }
+    }
+
+    private var switchMarkText: String {
+        if AppLanguage.current == .japanese {
+            return isOn ? "済" : "未"
+        }
+        return isOn ? "○" : "×"
     }
 }
