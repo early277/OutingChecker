@@ -394,7 +394,7 @@ private struct OutingPendingCheckboxDenseView: View {
 
         VStack(spacing: 0) {
             Spacer(minLength: 0)
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 6) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 4) {
                 ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                     if let item = slot {
                         DenseWidgetCheckboxItem(item: item)
@@ -429,7 +429,7 @@ private struct DenseWidgetCheckboxItem: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(item.isOn ? .secondary : .primary)
                 Text(item.title)
-                    .font(.system(size: 13.2))
+                    .font(.system(size: 14.5))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(item.isOn ? .secondary : .primary)

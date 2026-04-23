@@ -184,7 +184,7 @@ private struct ItemEditorView: View {
             case .daily:
                 return L10n.text("毎日", "Daily", "매일")
             case .weekday:
-                return L10n.text("曜日", "Weekday", "요일")
+                return L10n.text("曜日", "Weekdays", "요일")
             case .nthWeekday:
                 return L10n.text("第n曜日", "Nth weekday", "n번째 요일")
             }
@@ -300,7 +300,7 @@ private struct ItemEditorView: View {
 
                         if selectedRuleMode == .nthWeekday {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(L10n.text("第何（複数選択）", "Nth (multi-select)", "몇째(복수 선택)"))
+                                Text(L10n.text("第何（複数選択）", "Week number (multi-select)", "몇째(복수 선택)"))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 ChoiceChipGrid(
@@ -530,7 +530,7 @@ private struct SwitchPreview: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(isOn ? Color.green.opacity(0.85) : Color.gray.opacity(0.5))
                 .frame(width: 52, height: 30)
-            Text(isOn ? L10n.text("済", "Done", "완료") : L10n.text("未", "Todo", "미완료"))
+            Text(isOn ? L10n.text("済", "Done", "완료") : L10n.text("未", "Not done", "미완료"))
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white)
                 .offset(x: isOn ? -9 : 9)
