@@ -40,8 +40,8 @@ struct OutingCheckerWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             OutingWidgetListView(entry: entry)
         }
-        .configurationDisplayName("お出かけチェッカー")
-        .description("ウィジェット上で直接 ON/OFF を切り替えます。")
+        .configurationDisplayName(L10n.text("お出かけチェッカー", "Outing Checker", "외출 체크"))
+        .description(L10n.text("ウィジェット上で直接 ON/OFF を切り替えます。", "Toggle items directly on the widget.", "위젯에서 항목을 직접 ON/OFF 전환합니다."))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -53,8 +53,8 @@ struct OutingCheckerTwoColumnWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             OutingWidgetTwoColumnView(entry: entry)
         }
-        .configurationDisplayName("お出かけチェッカー (2列)")
-        .description("2列レイアウトで項目を表示します。")
+        .configurationDisplayName(L10n.text("お出かけチェッカー (2列)", "Outing Checker (2 columns)", "외출 체크 (2열)"))
+        .description(L10n.text("2列レイアウトで項目を表示します。", "Show items in a two-column layout.", "2열 레이아웃으로 항목을 표시합니다."))
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -66,8 +66,8 @@ struct OutingCheckerPendingCheckboxDenseWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             OutingPendingCheckboxDenseView(entry: entry)
         }
-        .configurationDisplayName("お出かけチェッカー (チェック・高密度)")
-        .description("項目をそのままの順で、チェックボックスで多く表示します。")
+        .configurationDisplayName(L10n.text("お出かけチェッカー (チェック・高密度)", "Outing Checker (Dense Checks)", "외출 체크 (고밀도 체크)"))
+        .description(L10n.text("項目をそのままの順で、チェックボックスで多く表示します。", "Show more items with checkboxes in a dense layout.", "체크박스와 함께 더 많은 항목을 고밀도로 표시합니다."))
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -79,8 +79,8 @@ struct OutingCheckerLockScreenCheckboxGridWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenCheckboxGridView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(小): チェック4x4")
-        .description("項目数分のチェックボックスを4行4列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(小): チェック4x4", "Lock Screen (S): Checks 4x4", "잠금화면(소): 체크 4x4"))
+        .description(L10n.text("項目数分のチェックボックスを4行4列で表示します。", "Show checkboxes in a 4x4 grid.", "체크박스를 4x4 그리드로 표시합니다."))
         .supportedFamilies([.accessoryCircular])
     }
 }
@@ -92,8 +92,8 @@ struct OutingCheckerLockScreenPendingListWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenPendingListView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 未達成4x1")
-        .description("未達成項目を4行1列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 未達成4x1", "Lock Screen (L): Pending 4x1", "잠금화면(대): 미완료 4x1"))
+        .description(L10n.text("未達成項目を4行1列で表示します。", "Show pending items in 4 rows and 1 column.", "미완료 항목을 4행 1열로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -105,8 +105,8 @@ struct OutingCheckerLockScreenPendingTwoColumnWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenPendingTwoColumnView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 未達成4x2")
-        .description("未達成項目を4行2列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 未達成4x2", "Lock Screen (L): Pending 4x2", "잠금화면(대): 미완료 4x2"))
+        .description(L10n.text("未達成項目を4行2列で表示します。", "Show pending items in 4 rows and 2 columns.", "미완료 항목을 4행 2열로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -118,8 +118,8 @@ struct OutingCheckerLockScreenPendingThreeColumnWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenPendingThreeColumnView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 未達成4x3")
-        .description("未達成項目を4行3列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 未達成4x3", "Lock Screen (L): Pending 4x3", "잠금화면(대): 미완료 4x3"))
+        .description(L10n.text("未達成項目を4行3列で表示します。", "Show pending items in 4 rows and 3 columns.", "미완료 항목을 4행 3열로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -131,8 +131,8 @@ struct OutingCheckerLockScreenAllItemsGridWidget: Widget {
         StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
             LockScreenAllItemsGridView(entry: entry)
         }
-        .configurationDisplayName("ロック画面(大): 全項目4x4")
-        .description("未達成/達成済みを4行4列で表示します。")
+        .configurationDisplayName(L10n.text("ロック画面(大): 全項目4x4", "Lock Screen (L): All items 4x4", "잠금화면(대): 전체 항목 4x4"))
+        .description(L10n.text("未達成/達成済みを4行4列で表示します。", "Show all items (done/pending) in a 4x4 grid.", "완료/미완료 전체 항목을 4x4 그리드로 표시합니다."))
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -157,7 +157,7 @@ private struct OutingWidgetListView: View {
                 }
 
                 if visibleItems.isEmpty {
-                    Text("項目がありません")
+                    Text(L10n.text("項目がありません", "No items", "항목이 없습니다"))
                         .font(WidgetLayout.font(family))
                         .foregroundStyle(.secondary)
                 }
@@ -197,7 +197,7 @@ private struct OutingWidgetTwoColumnView: View {
                 }
 
                 if visibleItems.isEmpty {
-                    Text("項目がありません")
+                    Text(L10n.text("項目がありません", "No items", "항목이 없습니다"))
                         .font(WidgetLayout.font(family))
                         .foregroundStyle(.secondary)
                 }
@@ -252,6 +252,10 @@ private struct LockScreenPendingListView: View {
         entry.items.filter { !$0.isOn }
     }
 
+    private var allCompleted: Bool {
+        !entry.items.isEmpty && pendingItems.isEmpty
+    }
+
     var body: some View {
         let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 1, rows: 4)
 
@@ -264,6 +268,13 @@ private struct LockScreenPendingListView: View {
                 }
             }
         }
+        .overlay {
+            if allCompleted {
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
     }
@@ -274,6 +285,10 @@ private struct LockScreenPendingTwoColumnView: View {
 
     private var pendingItems: [ChecklistItem] {
         entry.items.filter { !$0.isOn }
+    }
+
+    private var allCompleted: Bool {
+        !entry.items.isEmpty && pendingItems.isEmpty
     }
 
     var body: some View {
@@ -290,6 +305,13 @@ private struct LockScreenPendingTwoColumnView: View {
                 }
             }
         }
+        .overlay {
+            if allCompleted {
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://open"))
     }
@@ -300,6 +322,10 @@ private struct LockScreenPendingThreeColumnView: View {
 
     private var pendingItems: [ChecklistItem] {
         entry.items.filter { !$0.isOn }
+    }
+
+    private var allCompleted: Bool {
+        !entry.items.isEmpty && pendingItems.isEmpty
     }
 
     var body: some View {
@@ -314,6 +340,13 @@ private struct LockScreenPendingThreeColumnView: View {
                 } else {
                     Color.clear.frame(height: 10)
                 }
+            }
+        }
+        .overlay {
+            if allCompleted {
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
             }
         }
         .containerBackground(.clear, for: .widget)
@@ -361,7 +394,7 @@ private struct OutingPendingCheckboxDenseView: View {
 
         VStack(spacing: 0) {
             Spacer(minLength: 0)
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 6) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 4) {
                 ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                     if let item = slot {
                         DenseWidgetCheckboxItem(item: item)
@@ -378,7 +411,7 @@ private struct OutingPendingCheckboxDenseView: View {
         .widgetURL(URL(string: "outingchecker://open"))
         .overlay {
             if visibleItems.isEmpty {
-                Text("項目がありません")
+                Text(L10n.text("項目がありません", "No items", "항목이 없습니다"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -396,7 +429,7 @@ private struct DenseWidgetCheckboxItem: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(item.isOn ? .secondary : .primary)
                 Text(item.title)
-                    .font(.system(size: 13.2))
+                    .font(.system(size: 15.0))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(item.isOn ? .secondary : .primary)
@@ -456,17 +489,24 @@ private struct WidgetSwitchView: View {
             RoundedRectangle(cornerRadius: compact ? 12 : 14)
                 .fill(isOn ? Color.green.opacity(0.9) : Color.gray.opacity(0.45))
                 .frame(width: compact ? 40 : 50, height: compact ? 22 : 28)
-            Text(isOn ? "済" : "未")
-                .font(compact ? .caption2.bold() : .caption.weight(.bold))
+            Text(switchMarkText)
+                .font(.system(size: compact ? 11 : 12, weight: .bold))
                 .foregroundStyle(.white)
-                .offset(x: isOn ? (compact ? -7 : -9) : (compact ? 7 : 9))
+                .offset(x: isOn ? (compact ? -8 : -11) : (compact ? 8 : 11))
             Circle()
                 .fill(Color.white)
                 .frame(width: compact ? 18 : 22, height: compact ? 18 : 22)
                 .offset(x: isOn ? (compact ? 9 : 11) : (compact ? -9 : -11))
                 .shadow(radius: 1)
         }
-        .accessibilityLabel(isOn ? "オン" : "オフ")
+        .accessibilityLabel(isOn ? L10n.text("オン", "On", "켜짐") : L10n.text("オフ", "Off", "꺼짐"))
+    }
+
+    private var switchMarkText: String {
+        if AppLanguage.current == .japanese {
+            return isOn ? "済" : "未"
+        }
+        return isOn ? "○" : "×"
     }
 }
 

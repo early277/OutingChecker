@@ -60,55 +60,70 @@ enum ResetRule: Codable, Hashable {
     var summary: String {
         switch self {
         case let .daily(hour, minute):
-            return String(format: "毎日 %02d:%02d", hour, minute)
+            return String(
+                format: L10n.text("毎日 %02d:%02d", "Every day %02d:%02d", "매일 %02d:%02d"),
+                hour,
+                minute
+            )
         case let .dailyHours(hours):
-            return "毎日 \(hourJapaneseList(hours))"
+            return "\(L10n.text("毎日", "Every day", "매일")) \(hourLabelList(hours))"
         case let .weekday(weekday, hour, minute):
-            return "毎週 \(weekdayJapanese(weekday)) \(String(format: "%02d:%02d", hour, minute))"
+            return "\(L10n.text("毎週", "Every week", "매주")) \(weekdayLabel(weekday)) \(String(format: "%02d:%02d", hour, minute))"
         case let .weekdays(weekdays, hour, minute):
-            return "毎週 \(weekdayJapaneseList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
+            return "\(L10n.text("毎週", "Every week", "매주")) \(weekdayLabelList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
         case let .weekdaysHours(weekdays, hours):
-            return "毎週 \(weekdayJapaneseList(weekdays)) \(hourJapaneseList(hours))"
+            return "\(L10n.text("毎週", "Every week", "매주")) \(weekdayLabelList(weekdays)) \(hourLabelList(hours))"
         case let .nthWeekday(ordinal, weekday, hour, minute):
-            return "毎月第\(ordinal)\(weekdayJapanese(weekday)) \(String(format: "%02d:%02d", hour, minute))"
+            return "\(L10n.text("毎月", "Every month", "매월")) \(ordinalLabel(ordinal))\(weekdayLabel(weekday)) \(String(format: "%02d:%02d", hour, minute))"
         case let .nthWeekdays(ordinals, weekdays, hour, minute):
-            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
+            return "\(L10n.text("毎月", "Every month", "매월")) \(ordinalLabelList(ordinals))\(weekdayLabelList(weekdays)) \(String(format: "%02d:%02d", hour, minute))"
         case let .nthWeekdaysHours(ordinals, weekdays, hours):
-            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays)) \(hourJapaneseList(hours))"
+            return "\(L10n.text("毎月", "Every month", "매월")) \(ordinalLabelList(ordinals))\(weekdayLabelList(weekdays)) \(hourLabelList(hours))"
         case let .nthWeekdayPreviousDay(ordinal, weekday, hour, minute):
-            return "毎月第\(ordinal)\(weekdayJapanese(weekday))の前日 \(String(format: "%02d:%02d", hour, minute))"
+            return "\(L10n.text("毎月", "Every month", "매월")) \(ordinalLabel(ordinal))\(weekdayLabel(weekday))\(L10n.text("の前日", " previous day", " 전날")) \(String(format: "%02d:%02d", hour, minute))"
         case let .nthWeekdaysPreviousDay(ordinals, weekdays, hour, minute):
-            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays))の前日 \(String(format: "%02d:%02d", hour, minute))"
+            return "\(L10n.text("毎月", "Every month", "매월")) \(ordinalLabelList(ordinals))\(weekdayLabelList(weekdays))\(L10n.text("の前日", " previous day", " 전날")) \(String(format: "%02d:%02d", hour, minute))"
         case let .nthWeekdaysHoursPreviousDay(ordinals, weekdays, hours):
-            return "毎月 \(ordinalJapaneseList(ordinals))\(weekdayJapaneseList(weekdays))の前日 \(hourJapaneseList(hours))"
+            return "\(L10n.text("毎月", "Every month", "매월")) \(ordinalLabelList(ordinals))\(weekdayLabelList(weekdays))\(L10n.text("の前日", " previous day", " 전날")) \(hourLabelList(hours))"
         }
     }
 
-    private func weekdayJapanese(_ value: Int) -> String {
+    private func weekdayLabel(_ value: Int) -> String {
         switch value {
-        case 1: return "日曜"
-        case 2: return "月曜"
-        case 3: return "火曜"
-        case 4: return "水曜"
-        case 5: return "木曜"
-        case 6: return "金曜"
-        case 7: return "土曜"
+        case 1: return L10n.text("日", "Sun", "일")
+        case 2: return L10n.text("月", "Mon", "월")
+        case 3: return L10n.text("火", "Tue", "화")
+        case 4: return L10n.text("水", "Wed", "수")
+        case 5: return L10n.text("木", "Thu", "목")
+        case 6: return L10n.text("金", "Fri", "금")
+        case 7: return L10n.text("土", "Sat", "토")
         default: return "?"
         }
     }
 
-    private func weekdayJapaneseList(_ values: [Int]) -> String {
-        let normalized = Array(Set(values)).sorted().map(weekdayJapanese)
-        return normalized.isEmpty ? "未選択" : normalized.joined(separator: "・")
+    private func weekdayLabelList(_ values: [Int]) -> String {
+        let normalized = Array(Set(values)).sorted().map(weekdayLabel)
+        return normalized.isEmpty ? L10n.text("未選択", "Not selected", "선택 안 됨") : normalized.joined(separator: "・")
     }
 
-    private func ordinalJapaneseList(_ values: [Int]) -> String {
-        let normalized = Array(Set(values)).sorted().map { "第\($0)" }
-        return normalized.isEmpty ? "未選択" : normalized.joined(separator: "・")
+    private func ordinalLabel(_ value: Int) -> String {
+        switch AppLanguage.current {
+        case .japanese:
+            return "第\(value)"
+        case .english:
+            return "\(value)th"
+        case .korean:
+            return "\(value)번째"
+        }
     }
 
-    private func hourJapaneseList(_ values: [Int]) -> String {
+    private func ordinalLabelList(_ values: [Int]) -> String {
+        let normalized = Array(Set(values)).sorted().map(ordinalLabel)
+        return normalized.isEmpty ? L10n.text("未選択", "Not selected", "선택 안 됨") : normalized.joined(separator: "・")
+    }
+
+    private func hourLabelList(_ values: [Int]) -> String {
         let normalized = Array(Set(values)).sorted().map { String(format: "%02d:00", $0) }
-        return normalized.isEmpty ? "未選択" : normalized.joined(separator: "・")
+        return normalized.isEmpty ? L10n.text("未選択", "Not selected", "선택 안 됨") : normalized.joined(separator: "・")
     }
 }
