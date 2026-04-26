@@ -3,6 +3,7 @@ import WidgetKit
 import UIKit
 
 struct ContentView: View {
+    let route: AppRoute
     @State private var editMode: EditMode = .inactive
     @State private var items: [ChecklistItem] = []
     @State private var newTitle = ""
@@ -13,10 +14,17 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            contentForm
-                .navigationTitle("おでかけチェッカーウィジェット")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
+            Group {
+                if route == .watchChecklist {
+                    watchChecklistContent
+                } else {
+                    contentForm
+                }
+            }
+            .navigationTitle(route == .watchChecklist ? L10n.text("Watchチェック", "Watch Checklist", "Watch 체크") : "おでかけチェッカーウィジェット")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if route == .main {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(isEditing ? L10n.text("完了", "Done", "완료") : L10n.text("編集", "Edit", "편집")) {
                             withAnimation {
@@ -24,25 +32,28 @@ struct ContentView: View {
                             }
                         }
                     }
-                    ToolbarItem(placement: .principal) {
-                        Text(L10n.text("おでかけチェッカーウィジェット", "Outing Checker Widget", "외출 체크 위젯"))
-                            .font(.headline.weight(.semibold))
-                            .scaleEffect(0.6)
-                            .lineLimit(1)
-                    }
                 }
-                .onAppear(perform: reload)
-                .onChange(of: scenePhase) { _, newPhase in
-                    if newPhase == .active {
-                        reload()
-                    }
+                ToolbarItem(placement: .principal) {
+                    Text(route == .watchChecklist
+                         ? L10n.text("Watchチェック", "Watch Checklist", "Watch 체크")
+                         : L10n.text("おでかけチェッカーウィジェット", "Outing Checker Widget", "외출 체크 위젯"))
+                    .font(.headline.weight(.semibold))
+                    .scaleEffect(0.6)
+                    .lineLimit(1)
                 }
-                .environment(\.editMode, $editMode)
-                .sheet(item: $editingItem) { item in
-                    ItemEditorView(item: item) { updated in
-                        updateItem(updated)
-                    }
+            }
+            .onAppear(perform: reload)
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    reload()
                 }
+            }
+            .environment(\.editMode, $editMode)
+            .sheet(item: $editingItem) { item in
+                ItemEditorView(item: item) { updated in
+                    updateItem(updated)
+                }
+            }
         }
     }
 
@@ -102,6 +113,32 @@ struct ContentView: View {
         }
         .onDelete(perform: deleteItems)
         .onMove(perform: moveItems)
+    }
+
+    private var watchChecklistContent: some View {
+        List {
+            let pendingItems = items.filter { !$0.isOn }
+
+            if pendingItems.isEmpty {
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(pendingItems) { item in
+                    Button {
+                        toggleItem(item)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                                .foregroundStyle(item.isOn ? .green : .primary)
+                            Text(item.title)
+                                .lineLimit(1)
+                            Spacer()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     private func reload() {
