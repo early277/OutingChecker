@@ -2,6 +2,7 @@ import SwiftUI
 import WidgetKit
 import Foundation
 import WatchConnectivity
+import Combine
 
 private enum WatchStorage {
     static let appGroupID = "group.com.gmail.abyosida.OutingChecker"
