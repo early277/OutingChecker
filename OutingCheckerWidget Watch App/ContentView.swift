@@ -1,6 +1,7 @@
 import SwiftUI
 import WidgetKit
 import Foundation
+import WatchConnectivity
 
 private enum WatchStorage {
     static let appGroupID = "group.com.gmail.abyosida.OutingChecker"
@@ -43,6 +44,7 @@ private struct WatchChecklistItem: Identifiable, Codable {
 struct ContentView: View {
     @State private var items: [WatchChecklistItem] = []
     @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var syncManager = WatchSyncManager()
 
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -76,11 +78,19 @@ struct ContentView: View {
             }
         }
         .navigationTitle("Watchチェック")
-        .onAppear(perform: reload)
+        .onAppear {
+            reload()
+            syncManager.requestLatestItems()
+        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 reload()
+                syncManager.requestLatestItems()
             }
+        }
+        .onReceive(syncManager.$latestItemsData) { data in
+            guard let data else { return }
+            applyIncomingItemsData(data)
         }
     }
 
@@ -91,6 +101,15 @@ struct ContentView: View {
             return
         }
         items = decoded
+    }
+
+
+    private func applyIncomingItemsData(_ data: Data) {
+        guard let decoded = try? decoder.decode([WatchChecklistItem].self, from: data) else {
+            return
+        }
+        items = decoded
+        WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
     }
 
     private func toggleItem(_ item: WatchChecklistItem) {
@@ -104,10 +123,65 @@ struct ContentView: View {
 
         if let data = try? encoder.encode(latest) {
             WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
+            syncManager.sendUpdatedItems(data)
         }
 
         items = latest
         WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+
+private final class WatchSyncManager: NSObject, ObservableObject, WCSessionDelegate {
+    @Published var latestItemsData: Data?
+
+    override init() {
+        super.init()
+        activate()
+    }
+
+    private func activate() {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        session.delegate = self
+        session.activate()
+    }
+
+    func sendUpdatedItems(_ data: Data) {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+
+        if session.isReachable {
+            session.sendMessageData(data, replyHandler: nil) { _ in }
+        }
+        session.transferUserInfo(["items": data])
+    }
+
+    func requestLatestItems() {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+
+        if let data = session.receivedApplicationContext["items"] as? Data {
+            latestItemsData = data
+        }
+    }
+
+    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+        requestLatestItems()
+    }
+
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
+        guard let data = applicationContext["items"] as? Data else { return }
+        DispatchQueue.main.async {
+            self.latestItemsData = data
+        }
+    }
+
+    func session(_ session: WCSession, didReceiveMessageData messageData: Data) {
+        DispatchQueue.main.async {
+            self.latestItemsData = messageData
+        }
     }
 }
 
