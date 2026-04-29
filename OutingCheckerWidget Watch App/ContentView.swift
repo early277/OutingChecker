@@ -42,18 +42,35 @@ private struct WatchChecklistItem: Identifiable, Codable {
     }
 }
 
+private struct RecentlyCompletedItem: Identifiable {
+    let id: UUID
+    let expiresAt: Date
+}
+
 struct ContentView: View {
     @State private var items: [WatchChecklistItem] = []
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var syncManager = WatchSyncManager()
+    @State private var recentlyCompleted: [RecentlyCompletedItem] = []
 
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
+    private let undoGraceSeconds: TimeInterval = 30
 
     private var pendingItems: [WatchChecklistItem] {
         items
             .sorted { $0.sortOrder < $1.sortOrder }
             .filter { !$0.isOn }
+    }
+
+    private var undoCandidates: [WatchChecklistItem] {
+        items
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .filter { item in
+                guard item.isOn else { return false }
+                guard let record = recentlyCompleted.first(where: { $0.id == item.id }) else { return false }
+                return record.expiresAt > Date()
+            }
     }
 
     var body: some View {
@@ -77,16 +94,37 @@ struct ContentView: View {
                     .buttonStyle(.plain)
                 }
             }
+
+            if !undoCandidates.isEmpty {
+                Section("取り消し (30秒)") {
+                    ForEach(undoCandidates) { item in
+                        Button {
+                            toggleItem(item)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "arrow.uturn.backward.circle")
+                                    .foregroundStyle(.orange)
+                                Text(item.title)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
         .navigationTitle("Watchチェック")
         .onAppear {
             reload()
             syncManager.requestLatestItems()
+            pruneExpiredRecentlyCompleted()
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
                 reload()
                 syncManager.requestLatestItems()
+                pruneExpiredRecentlyCompleted()
             }
         }
         .onReceive(syncManager.$latestItemsData) { data in
@@ -104,13 +142,13 @@ struct ContentView: View {
         items = decoded
     }
 
-
     private func applyIncomingItemsData(_ data: Data) {
         guard let decoded = try? decoder.decode([WatchChecklistItem].self, from: data) else {
             return
         }
         items = decoded
         WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
+        pruneExpiredRecentlyCompleted()
     }
 
     private func toggleItem(_ item: WatchChecklistItem) {
@@ -119,8 +157,16 @@ struct ContentView: View {
             return
         }
 
+        let willBecomeOn = !latest[index].isOn
         latest[index].isOn.toggle()
         latest.sort { $0.sortOrder < $1.sortOrder }
+
+        if willBecomeOn {
+            recentlyCompleted.removeAll { $0.id == item.id }
+            recentlyCompleted.append(RecentlyCompletedItem(id: item.id, expiresAt: Date().addingTimeInterval(undoGraceSeconds)))
+        } else {
+            recentlyCompleted.removeAll { $0.id == item.id }
+        }
 
         if let data = try? encoder.encode(latest) {
             WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
@@ -128,10 +174,15 @@ struct ContentView: View {
         }
 
         items = latest
+        pruneExpiredRecentlyCompleted()
         WidgetCenter.shared.reloadAllTimelines()
     }
-}
 
+    private func pruneExpiredRecentlyCompleted() {
+        let now = Date()
+        recentlyCompleted.removeAll { $0.expiresAt <= now }
+    }
+}
 
 private final class WatchSyncManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var latestItemsData: Data?

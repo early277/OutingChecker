@@ -265,7 +265,21 @@ private final class IOSWatchSyncManager: NSObject, ObservableObject, WCSessionDe
             return
         }
 
-        store.saveItems(decoded)
+        let existingByID = Dictionary(uniqueKeysWithValues: store.loadItems().map { ($0.id, $0) })
+        let merged = decoded.map { incoming in
+            guard let existing = existingByID[incoming.id] else { return incoming }
+
+            var combined = incoming
+            if combined.autoResetRule == nil {
+                combined.autoResetRule = existing.autoResetRule
+            }
+            if combined.lastAutoResetTriggerDate == nil {
+                combined.lastAutoResetTriggerDate = existing.lastAutoResetTriggerDate
+            }
+            return combined
+        }
+
+        store.saveItems(merged)
         WidgetCenter.shared.reloadAllTimelines()
     }
 }
