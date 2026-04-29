@@ -1,17 +1,24 @@
-//
-//  OutingCheckerWidgetApp.swift
-//  OutingCheckerWidget Watch App
-//
-//  Created by yusuke yoshida on 2026/04/28.
-//
-
 import SwiftUI
 
 @main
 struct OutingCheckerWidget_Watch_AppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+        }
+    }
+}
+
+private struct RootView: View {
+    var body: some View {
+        if #available(watchOS 9.0, *) {
+            NavigationStack {
+                ContentView()
+            }
+        } else {
+            NavigationView {
+                ContentView()
+            }
         }
     }
 }

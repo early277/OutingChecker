@@ -1,6 +1,8 @@
 import SwiftUI
 import WidgetKit
 import UIKit
+import WatchConnectivity
+import Combine
 
 struct ContentView: View {
     let route: AppRoute
@@ -11,6 +13,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private let store = ChecklistStore()
+    @StateObject private var watchSync = IOSWatchSyncManager()
 
     var body: some View {
         NavigationStack {
@@ -43,7 +46,7 @@ struct ContentView: View {
                 }
             }
             .onAppear(perform: reload)
-            .onChange(of: scenePhase) { _, newPhase in
+            .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
                     reload()
                 }
@@ -144,6 +147,7 @@ struct ContentView: View {
     private func reload() {
         items = store.currentItemsApplyingResetIfNeeded()
         WidgetCenter.shared.reloadAllTimelines()
+        watchSync.push(items: items)
     }
 
     private func persistItems(mutating mutation: (inout [ChecklistItem]) -> Void) {
@@ -153,6 +157,7 @@ struct ContentView: View {
         store.saveItems(latest)
         items = store.currentItemsApplyingResetIfNeeded()
         WidgetCenter.shared.reloadAllTimelines()
+        watchSync.push(items: items)
     }
 
     private func addItem() {
@@ -204,6 +209,64 @@ struct ContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             exit(0)
         }
+    }
+}
+
+
+private final class IOSWatchSyncManager: NSObject, ObservableObject, WCSessionDelegate {
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+    private let store = ChecklistStore()
+
+    override init() {
+        super.init()
+        activate()
+    }
+
+    private func activate() {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        session.delegate = self
+        session.activate()
+    }
+
+    func push(items: [ChecklistItem]) {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        guard let data = try? encoder.encode(items) else { return }
+
+        do {
+            try session.updateApplicationContext(["items": data])
+        } catch {
+            // ignore transient connectivity errors
+        }
+    }
+
+    func sessionDidBecomeInactive(_ session: WCSession) {}
+
+    func sessionDidDeactivate(_ session: WCSession) {
+        session.activate()
+    }
+
+    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {}
+
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
+        guard let data = userInfo["items"] as? Data else { return }
+        applyIncomingItemsData(data)
+    }
+
+    func session(_ session: WCSession, didReceiveMessageData messageData: Data) {
+        applyIncomingItemsData(messageData)
+    }
+
+    private func applyIncomingItemsData(_ data: Data) {
+        guard let decoded = try? decoder.decode([ChecklistItem].self, from: data) else {
+            return
+        }
+
+        store.saveItems(decoded)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
 
