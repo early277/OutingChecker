@@ -138,6 +138,7 @@ struct OutingCheckerWatchPendingCountWidget: Widget {
     }
 }
 
+#if os(watchOS)
 
 struct OutingCheckerWatchPendingCornerWidget: Widget {
     let kind = "OutingCheckerWatchPendingCornerWidget"
@@ -151,6 +152,8 @@ struct OutingCheckerWatchPendingCornerWidget: Widget {
         .supportedFamilies([.accessoryCorner])
     }
 }
+
+#endif
 
 struct OutingCheckerLockScreenPendingThreeColumnWidget: Widget {
     let kind = "OutingCheckerLockScreenPendingThreeColumnWidget"
@@ -419,6 +422,7 @@ private struct WatchPendingCountView: View {
     }
 }
 
+#if os(watchOS)
 
 private struct WatchPendingCornerView: View {
     let entry: OutingEntry
@@ -437,6 +441,8 @@ private struct WatchPendingCornerView: View {
             .widgetURL(URL(string: "outingchecker://watch/checklist"))
     }
 }
+
+#endif
 
 private struct LockScreenPendingThreeColumnView: View {
     let entry: OutingEntry
