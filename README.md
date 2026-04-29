@@ -44,3 +44,42 @@
 
 - 共有ロジックは `Shared/` 配下に配置
 - ウィジェット実装は `OutingCheckerWidget/` 配下
+
+## ビルドエラー対処（entitlements が開けない）
+
+Xcode で次のようなエラーが出る場合があります。
+
+- `The file ".../OutingCheckerWidget/OutingCheckerWidgetExtension.entitlements" could not be opened.`
+
+このエラーは、多くの場合 `CODE_SIGN_ENTITLEMENTS` の参照先が壊れている（古い参照 ID / 間違った場所の参照）ときに発生します。  
+**最短の直し方は「一度参照を消して、正しい entitlements を再追加する」ことです。**
+
+1. **いまの壊れた参照を消す（重要）**
+   - 左ペインで `OutingCheckerWidgetExtension.entitlements` を右クリック → **Delete**  
+   - ダイアログは **Remove Reference** を選択（Move to Trash ではない）
+2. **正しいファイルを再追加する**
+   - `File > Add Files to "OutingChecker"...`
+   - 実ファイル `OutingCheckerWidget/OutingCheckerWidgetExtension.entitlements` を選択
+   - Target は **WidgetExtension ターゲットのみ**にチェック
+3. **Build Settings を固定する**
+   - WidgetExtension ターゲット > `Build Settings` > `Code Signing Entitlements`
+   - 値を `OutingCheckerWidget/OutingCheckerWidgetExtension.entitlements` にする（Debug/Release 両方）
+4. **重複ファイルを避ける**
+   - ルートの `OutingCheckerWidgetExtension.entitlements` を使わない方針なら削除して 1 つに統一
+5. **クリーンして再ビルド**
+   - `Product > Clean Build Folder`
+   - Xcode 再起動 → Build
+
+### それでも直らない場合（最終確認）
+
+- `TARGETS > WidgetExtension > Build Phases > Copy Bundle Resources` に entitlements が入っていたら削除（通常不要）
+- `DerivedData` を削除して再ビルド
+- `.xcodeproj` の競合解消後に壊れたケースがあるため、直前のブランチ差分で `project.pbxproj` を確認
+
+### ターミナルでの事前確認（任意）
+
+リポジトリ直下で次を実行すると、期待パスに entitlements があるか確認できます。
+
+```bash
+./scripts/check_entitlements_path.sh
+```
