@@ -12,6 +12,7 @@ struct OutingCheckerWidgetBundle: WidgetBundle {
         OutingCheckerLockScreenPendingTwoColumnWidget()
         OutingCheckerWatchPendingTwoColumnWidget()
         OutingCheckerWatchPendingCountWidget()
+        OutingCheckerWatchPendingCornerWidget()
         OutingCheckerLockScreenPendingThreeColumnWidget()
         OutingCheckerLockScreenAllItemsGridWidget()
     }

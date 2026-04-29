@@ -138,6 +138,20 @@ struct OutingCheckerWatchPendingCountWidget: Widget {
     }
 }
 
+
+struct OutingCheckerWatchPendingCornerWidget: Widget {
+    let kind = "OutingCheckerWatchPendingCornerWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            WatchPendingCornerView(entry: entry)
+        }
+        .configurationDisplayName(L10n.text("Watch: 未達成数(コーナー)", "Watch: Pending (corner)", "Watch: 미완료 수(코너)"))
+        .description(L10n.text("未達成項目数をコーナー表示し、タップでWatchアプリに移動します。", "Show pending count in a corner complication and open Watch app on tap.", "미완료 항목 수를 코너 컴플리케이션에 표시하고 탭 시 Watch 앱을 엽니다."))
+        .supportedFamilies([.accessoryCorner])
+    }
+}
+
 struct OutingCheckerLockScreenPendingThreeColumnWidget: Widget {
     let kind = "OutingCheckerLockScreenPendingThreeColumnWidget"
 
@@ -402,6 +416,25 @@ private struct WatchPendingCountView: View {
         }
         .containerBackground(.clear, for: .widget)
         .widgetURL(URL(string: "outingchecker://watch/checklist"))
+    }
+}
+
+
+private struct WatchPendingCornerView: View {
+    let entry: OutingEntry
+
+    private var pendingCount: Int {
+        entry.items.filter { !$0.isOn }.count
+    }
+
+    var body: some View {
+        Text("\(pendingCount)")
+            .font(.system(size: 14, weight: .bold, design: .rounded))
+            .widgetLabel {
+                Text(L10n.text("未達成\(pendingCount)件", "\(pendingCount) pending", "미완료 \(pendingCount)개"))
+            }
+            .containerBackground(.clear, for: .widget)
+            .widgetURL(URL(string: "outingchecker://watch/checklist"))
     }
 }
 
