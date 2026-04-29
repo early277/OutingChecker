@@ -4,9 +4,11 @@ import SwiftUI
 @main
 struct OutingCheckerWidgetBundle: WidgetBundle {
     var body: some Widget {
+#if os(iOS)
         OutingCheckerWidget()
         OutingCheckerTwoColumnWidget()
         OutingCheckerPendingCheckboxDenseWidget()
+#endif
         OutingCheckerLockScreenCheckboxGridWidget()
         OutingCheckerLockScreenPendingListWidget()
         OutingCheckerLockScreenPendingTwoColumnWidget()

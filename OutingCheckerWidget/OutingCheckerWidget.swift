@@ -33,6 +33,7 @@ struct OutingProvider: TimelineProvider {
     }
 }
 
+#if os(iOS)
 struct OutingCheckerWidget: Widget {
     let kind = "OutingCheckerWidget"
 
@@ -46,6 +47,9 @@ struct OutingCheckerWidget: Widget {
     }
 }
 
+
+#endif
+#if os(iOS)
 struct OutingCheckerTwoColumnWidget: Widget {
     let kind = "OutingCheckerTwoColumnWidget"
 
@@ -59,6 +63,9 @@ struct OutingCheckerTwoColumnWidget: Widget {
     }
 }
 
+
+#endif
+#if os(iOS)
 struct OutingCheckerPendingCheckboxDenseWidget: Widget {
     let kind = "OutingCheckerPendingCheckboxDenseWidget"
 
@@ -72,6 +79,8 @@ struct OutingCheckerPendingCheckboxDenseWidget: Widget {
     }
 }
 
+
+#endif
 struct OutingCheckerLockScreenCheckboxGridWidget: Widget {
     let kind = "OutingCheckerLockScreenCheckboxGridWidget"
 
