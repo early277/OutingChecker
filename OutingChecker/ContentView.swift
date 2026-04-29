@@ -46,7 +46,7 @@ struct ContentView: View {
                 }
             }
             .onAppear(perform: reload)
-            .onChange(of: scenePhase) { _, newPhase in
+            .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
                     reload()
                 }
