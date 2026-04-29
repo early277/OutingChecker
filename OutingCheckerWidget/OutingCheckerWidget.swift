@@ -111,6 +111,19 @@ struct OutingCheckerLockScreenPendingTwoColumnWidget: Widget {
     }
 }
 
+struct OutingCheckerWatchPendingTwoColumnWidget: Widget {
+    let kind = "OutingCheckerWatchPendingTwoColumnWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: OutingProvider()) { entry in
+            WatchPendingTwoColumnView(entry: entry)
+        }
+        .configurationDisplayName(L10n.text("Watch: 未達成4x2", "Watch: Pending 4x2", "Watch: 미완료 4x2"))
+        .description(L10n.text("未達成項目を4行2列で表示し、タップでWatchアプリに移動します。", "Show pending items in 4 rows and 2 columns, then open the Watch app.", "미완료 항목을 4행 2열로 표시하고 탭 시 Watch 앱을 엽니다."))
+        .supportedFamilies([.accessoryRectangular])
+    }
+}
+
 struct OutingCheckerLockScreenPendingThreeColumnWidget: Widget {
     let kind = "OutingCheckerLockScreenPendingThreeColumnWidget"
 
@@ -292,28 +305,65 @@ private struct LockScreenPendingTwoColumnView: View {
     }
 
     var body: some View {
+        PendingTwoColumnGridView(
+            entry: entry,
+            fontSize: 10,
+            emptyHeight: 10,
+            destinationURL: URL(string: "outingchecker://open")
+        )
+    }
+}
+
+private struct WatchPendingTwoColumnView: View {
+    let entry: OutingEntry
+
+    var body: some View {
+        PendingTwoColumnGridView(
+            entry: entry,
+            fontSize: 9,
+            emptyHeight: 9,
+            destinationURL: URL(string: "outingchecker://watch/checklist")
+        )
+    }
+}
+
+private struct PendingTwoColumnGridView: View {
+    let entry: OutingEntry
+    let fontSize: CGFloat
+    let emptyHeight: CGFloat
+    let destinationURL: URL?
+
+    private var pendingItems: [ChecklistItem] {
+        entry.items.filter { !$0.isOn }
+    }
+
+    private var allCompleted: Bool {
+        !entry.items.isEmpty && pendingItems.isEmpty
+    }
+
+    var body: some View {
         let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 2)
         let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 2, rows: 4)
 
         LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
-                    LockScreenItemRowView(item: item, fontSize: 10)
+                    LockScreenItemRowView(item: item, fontSize: fontSize)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    Color.clear.frame(height: 10)
+                    Color.clear.frame(height: emptyHeight)
                 }
             }
         }
         .overlay {
             if allCompleted {
                 Text(L10n.text("すべて達成", "All completed", "모두 완료"))
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: fontSize, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
         }
         .containerBackground(.clear, for: .widget)
-        .widgetURL(URL(string: "outingchecker://open"))
+        .widgetURL(destinationURL)
     }
 }
 
