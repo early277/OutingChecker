@@ -104,6 +104,7 @@ struct ContentView: View {
             return
         }
         items = decoded
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func applyIncomingItemsData(_ data: Data) {
@@ -113,6 +114,7 @@ struct ContentView: View {
         items = decoded
         WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
         refreshVisibleItems()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func toggleItem(_ item: WatchChecklistItem) {
