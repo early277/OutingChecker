@@ -559,7 +559,7 @@ private struct DenseWidgetCheckboxItem: View {
     let item: ChecklistItem
 
     var body: some View {
-        Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
+        interactiveButton {
             HStack(spacing: 4) {
                 Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
                     .font(.system(size: 11, weight: .semibold))
@@ -574,6 +574,19 @@ private struct DenseWidgetCheckboxItem: View {
             .opacity(item.isOn ? 0.6 : 1.0)
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func interactiveButton<Label: View>(@ViewBuilder label: () -> Label) -> some View {
+#if os(watchOS)
+        Link(destination: URL(string: "outingchecker://open")!) {
+            label()
+        }
+#else
+        Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
+            label()
+        }
+#endif
     }
 }
 
@@ -600,7 +613,7 @@ private struct WidgetItemButton: View {
     let font: Font
 
     var body: some View {
-        Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
+        interactiveButton {
             HStack(spacing: 8) {
                 WidgetSwitchView(isOn: item.isOn, compact: compact)
                 Text(item.title)
@@ -613,6 +626,19 @@ private struct WidgetItemButton: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func interactiveButton<Label: View>(@ViewBuilder label: () -> Label) -> some View {
+#if os(watchOS)
+        Link(destination: URL(string: "outingchecker://open")!) {
+            label()
+        }
+#else
+        Button(intent: ToggleItemIntent(itemID: item.id.uuidString)) {
+            label()
+        }
+#endif
     }
 }
 
