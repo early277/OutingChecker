@@ -11,12 +11,8 @@ struct OutingProvider: TimelineProvider {
     private let store = ChecklistStore()
 
     func placeholder(in context: Context) -> OutingEntry {
-        OutingEntry(date: Date(), items: [
-            ChecklistItem(title: "財布", isOn: true, sortOrder: 0),
-            ChecklistItem(title: "鍵", isOn: false, sortOrder: 1),
-            ChecklistItem(title: "スマホ", isOn: true, sortOrder: 2),
-            ChecklistItem(title: "ハンカチ", isOn: false, sortOrder: 3)
-        ])
+        let items = store.currentItemsApplyingResetIfNeeded()
+        return OutingEntry(date: Date(), items: items)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (OutingEntry) -> Void) {
@@ -306,7 +302,7 @@ private struct LockScreenPendingListView: View {
     }
 
     private var allCompleted: Bool {
-        !entry.items.isEmpty && pendingItems.isEmpty
+        pendingItems.isEmpty
     }
 
     var body: some View {
