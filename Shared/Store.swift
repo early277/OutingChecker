@@ -18,11 +18,7 @@ struct ChecklistStore {
     func loadItems() -> [ChecklistItem] {
         guard let data = defaults.data(forKey: AppConfig.itemsKey),
               let items = try? decoder.decode([ChecklistItem].self, from: data) else {
-            return [
-                ChecklistItem(title: "財布", sortOrder: 0),
-                ChecklistItem(title: "鍵", sortOrder: 1),
-                ChecklistItem(title: "スマホ", sortOrder: 2)
-            ]
+            return []
         }
 
         var sortedItems = items.sorted { $0.sortOrder < $1.sortOrder }
