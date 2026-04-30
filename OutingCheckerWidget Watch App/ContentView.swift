@@ -42,31 +42,19 @@ private struct WatchChecklistItem: Identifiable, Codable {
     }
 }
 
-private struct RecentlyCompletedItem: Identifiable {
-    let id: UUID
-    let expiresAt: Date
-}
-
 struct ContentView: View {
     @State private var items: [WatchChecklistItem] = []
+    @State private var visibleItemIDs: Set<UUID> = []
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var syncManager = WatchSyncManager()
-    @State private var recentlyCompleted: [RecentlyCompletedItem] = []
 
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
-    private let undoGraceSeconds: TimeInterval = 30
-
-    private var pendingItems: [WatchChecklistItem] {
-        items
-            .sorted { $0.sortOrder < $1.sortOrder }
-            .filter { !$0.isOn }
-    }
 
     private var visibleWatchItems: [WatchChecklistItem] {
         items
             .sorted { $0.sortOrder < $1.sortOrder }
-            .filter { !$0.isOn || isUndoCandidate($0.id) }
+            .filter { visibleItemIDs.contains($0.id) }
     }
 
     var body: some View {
@@ -76,36 +64,18 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(visibleWatchItems) { item in
-                    if isUndoCandidate(item.id) {
-                        Button {
-                            toggleItem(item)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "arrow.uturn.backward.circle")
-                                    .foregroundStyle(.orange)
-                                Text(item.title)
-                                    .lineLimit(1)
-                                Spacer(minLength: 0)
-                                Text("30秒")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
+                    Button {
+                        toggleItem(item)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                                .foregroundStyle(item.isOn ? .green : .primary)
+                            Text(item.title)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
                         }
-                        .buttonStyle(.plain)
-                    } else {
-                        Button {
-                            toggleItem(item)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(item.isOn ? .green : .primary)
-                                Text(item.title)
-                                    .lineLimit(1)
-                                Spacer(minLength: 0)
-                            }
-                        }
-                        .buttonStyle(.plain)
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -113,13 +83,13 @@ struct ContentView: View {
         .onAppear {
             reload()
             syncManager.requestLatestItems()
-            pruneExpiredRecentlyCompleted()
+            refreshVisibleItems()
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
                 reload()
                 syncManager.requestLatestItems()
-                pruneExpiredRecentlyCompleted()
+                refreshVisibleItems()
             }
         }
         .onReceive(syncManager.$latestItemsData) { data in
@@ -131,7 +101,6 @@ struct ContentView: View {
     private func reload() {
         guard let data = WatchStorage.defaults.data(forKey: WatchStorage.itemsKey),
               let decoded = try? decoder.decode([WatchChecklistItem].self, from: data) else {
-            items = []
             return
         }
         items = decoded
@@ -143,7 +112,7 @@ struct ContentView: View {
         }
         items = decoded
         WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
-        pruneExpiredRecentlyCompleted()
+        refreshVisibleItems()
     }
 
     private func toggleItem(_ item: WatchChecklistItem) {
@@ -152,16 +121,8 @@ struct ContentView: View {
             return
         }
 
-        let willBecomeOn = !latest[index].isOn
         latest[index].isOn.toggle()
         latest.sort { $0.sortOrder < $1.sortOrder }
-
-        if willBecomeOn {
-            recentlyCompleted.removeAll { $0.id == item.id }
-            recentlyCompleted.append(RecentlyCompletedItem(id: item.id, expiresAt: Date().addingTimeInterval(undoGraceSeconds)))
-        } else {
-            recentlyCompleted.removeAll { $0.id == item.id }
-        }
 
         if let data = try? encoder.encode(latest) {
             WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
@@ -169,17 +130,11 @@ struct ContentView: View {
         }
 
         items = latest
-        pruneExpiredRecentlyCompleted()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func pruneExpiredRecentlyCompleted() {
-        let now = Date()
-        recentlyCompleted.removeAll { $0.expiresAt <= now }
-    }
-
-    private func isUndoCandidate(_ id: UUID) -> Bool {
-        recentlyCompleted.contains { $0.id == id && $0.expiresAt > Date() }
+    private func refreshVisibleItems() {
+        visibleItemIDs = Set(items.filter { !$0.isOn }.map(\.id))
     }
 }
 
@@ -213,7 +168,7 @@ private final class WatchSyncManager: NSObject, ObservableObject, WCSessionDeleg
         let session = WCSession.default
         guard session.activationState == .activated else { return }
 
-        if let data = session.receivedApplicationContext["items"] as? Data {
+        if let data = session.applicationContext["items"] as? Data {
             latestItemsData = data
         }
     }
