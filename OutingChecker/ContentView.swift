@@ -4,6 +4,10 @@ import UIKit
 import WatchConnectivity
 import Combine
 
+private extension Notification.Name {
+    static let iosWatchSyncDidApplyIncomingItems = Notification.Name("iosWatchSyncDidApplyIncomingItems")
+}
+
 struct ContentView: View {
     let route: AppRoute
     @State private var editMode: EditMode = .inactive
@@ -50,6 +54,9 @@ struct ContentView: View {
                 if newPhase == .active {
                     reload()
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .iosWatchSyncDidApplyIncomingItems)) { _ in
+                reload()
             }
             .environment(\.editMode, $editMode)
             .sheet(item: $editingItem) { item in
@@ -281,6 +288,7 @@ private final class IOSWatchSyncManager: NSObject, ObservableObject, WCSessionDe
 
         store.saveItems(merged)
         WidgetCenter.shared.reloadAllTimelines()
+        NotificationCenter.default.post(name: .iosWatchSyncDidApplyIncomingItems, object: nil)
     }
 }
 
