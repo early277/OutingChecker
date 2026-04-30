@@ -24,8 +24,18 @@ struct OutingProvider: TimelineProvider {
         let now = Date()
         let items = store.currentItemsApplyingResetIfNeeded(now: now)
         let entry = OutingEntry(date: now, items: items)
-        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 15, to: now) ?? now.addingTimeInterval(900)
+        let nextRefresh = nextHourlyRefresh(after: now)
         completion(Timeline(entries: [entry], policy: .after(nextRefresh)))
+    }
+
+    private func nextHourlyRefresh(after now: Date) -> Date {
+        let calendar = Calendar.current
+        let nextAtMinuteOne = calendar.nextDate(
+            after: now,
+            matching: DateComponents(minute: 1, second: 0),
+            matchingPolicy: .nextTime
+        )
+        return nextAtMinuteOne ?? now.addingTimeInterval(3600)
     }
 }
 
