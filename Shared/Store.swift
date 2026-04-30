@@ -1,6 +1,57 @@
 import Foundation
 #if os(iOS)
 import WatchConnectivity
+
+private final class WatchSessionBridge: NSObject, WCSessionDelegate {
+    static let shared = WatchSessionBridge()
+
+    private var pendingItemsData: Data?
+    private let session: WCSession
+
+    private override init() {
+        self.session = WCSession.default
+        super.init()
+        self.session.delegate = self
+    }
+
+    func pushItemsData(_ data: Data) {
+        guard WCSession.isSupported() else { return }
+
+        pendingItemsData = data
+        if session.activationState == .activated {
+            flushPendingItemsData()
+        } else {
+            session.activate()
+        }
+    }
+
+    private func flushPendingItemsData() {
+        guard session.activationState == .activated,
+              let data = pendingItemsData else {
+            return
+        }
+
+        do {
+            try session.updateApplicationContext(["items": data])
+        } catch {
+            // ignore transient connectivity errors
+        }
+        session.transferUserInfo(["items": data])
+        pendingItemsData = nil
+    }
+
+    func session(_ session: WCSession,
+                 activationDidCompleteWith activationState: WCSessionActivationState,
+                 error: Error?) {
+        flushPendingItemsData()
+    }
+
+    func sessionDidBecomeInactive(_ session: WCSession) {}
+
+    func sessionDidDeactivate(_ session: WCSession) {
+        session.activate()
+    }
+}
 #endif
 
 struct ChecklistStore {
@@ -92,18 +143,8 @@ struct ChecklistStore {
 
     private func pushItemsToWatchIfPossible(_ items: [ChecklistItem]) {
 #if os(iOS)
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        session.activate()
         guard let data = try? encoder.encode(items) else { return }
-
-        do {
-            try session.updateApplicationContext(["items": data])
-        } catch {
-            // ignore transient connectivity errors
-        }
-
-        session.transferUserInfo(["items": data])
+        WatchSessionBridge.shared.pushItemsData(data)
 #endif
     }
 
