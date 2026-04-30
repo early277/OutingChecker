@@ -63,47 +63,42 @@ struct ContentView: View {
             .filter { !$0.isOn }
     }
 
-    private var undoCandidates: [WatchChecklistItem] {
+    private var visibleWatchItems: [WatchChecklistItem] {
         items
             .sorted { $0.sortOrder < $1.sortOrder }
-            .filter { item in
-                guard item.isOn else { return false }
-                guard let record = recentlyCompleted.first(where: { $0.id == item.id }) else { return false }
-                return record.expiresAt > Date()
-            }
+            .filter { !$0.isOn || isUndoCandidate($0.id) }
     }
 
     var body: some View {
         List {
-            if pendingItems.isEmpty {
+            if visibleWatchItems.isEmpty {
                 Text("すべて達成")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(pendingItems) { item in
-                    Button {
-                        toggleItem(item)
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
-                                .foregroundStyle(item.isOn ? .green : .primary)
-                            Text(item.title)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            if !undoCandidates.isEmpty {
-                Section("取り消し (30秒)") {
-                    ForEach(undoCandidates) { item in
+                ForEach(visibleWatchItems) { item in
+                    if isUndoCandidate(item.id) {
                         Button {
                             toggleItem(item)
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "arrow.uturn.backward.circle")
                                     .foregroundStyle(.orange)
+                                Text(item.title)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                Text("30秒")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button {
+                            toggleItem(item)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: item.isOn ? "checkmark.square.fill" : "square")
+                                    .foregroundStyle(item.isOn ? .green : .primary)
                                 Text(item.title)
                                     .lineLimit(1)
                                 Spacer(minLength: 0)
@@ -181,6 +176,10 @@ struct ContentView: View {
     private func pruneExpiredRecentlyCompleted() {
         let now = Date()
         recentlyCompleted.removeAll { $0.expiresAt <= now }
+    }
+
+    private func isUndoCandidate(_ id: UUID) -> Bool {
+        recentlyCompleted.contains { $0.id == id && $0.expiresAt > Date() }
     }
 }
 
