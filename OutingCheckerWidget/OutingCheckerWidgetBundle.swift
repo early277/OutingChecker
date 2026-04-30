@@ -1,6 +1,7 @@
 import WidgetKit
 import SwiftUI
 
+#if !os(watchOS)
 @main
 struct OutingCheckerWidgetBundle: WidgetBundle {
     var body: some Widget {
@@ -21,3 +22,4 @@ struct OutingCheckerWidgetBundle: WidgetBundle {
         OutingCheckerLockScreenAllItemsGridWidget()
     }
 }
+#endif
