@@ -24,18 +24,21 @@ struct OutingProvider: TimelineProvider {
         let now = Date()
         let items = store.currentItemsApplyingResetIfNeeded(now: now)
         let entry = OutingEntry(date: now, items: items)
-        let nextRefresh = nextHourlyRefresh(after: now)
+        let nextRefresh = nextQuarterHourRefresh(after: now)
         completion(Timeline(entries: [entry], policy: .after(nextRefresh)))
     }
 
-    private func nextHourlyRefresh(after now: Date) -> Date {
+    private func nextQuarterHourRefresh(after now: Date) -> Date {
         let calendar = Calendar.current
-        let nextAtMinuteOne = calendar.nextDate(
-            after: now,
-            matching: DateComponents(minute: 1, second: 0),
-            matchingPolicy: .nextTime
-        )
-        return nextAtMinuteOne ?? now.addingTimeInterval(3600)
+        let minuteMarks = [1, 16, 31, 46]
+        let candidates = minuteMarks.compactMap { minute in
+            calendar.nextDate(
+                after: now,
+                matching: DateComponents(minute: minute, second: 0),
+                matchingPolicy: .nextTime
+            )
+        }
+        return candidates.min() ?? now.addingTimeInterval(900)
     }
 }
 
