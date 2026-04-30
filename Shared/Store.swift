@@ -1,4 +1,7 @@
 import Foundation
+#if os(iOS)
+import WatchConnectivity
+#endif
 
 struct ChecklistStore {
     private struct LegacyResetState: Codable {
@@ -46,6 +49,7 @@ struct ChecklistStore {
 
         items[index].isOn.toggle()
         saveItems(items)
+        pushItemsToWatchIfPossible(items)
         return items
     }
 
@@ -85,6 +89,23 @@ struct ChecklistStore {
         return items
     }
 
+
+    private func pushItemsToWatchIfPossible(_ items: [ChecklistItem]) {
+#if os(iOS)
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        session.activate()
+        guard let data = try? encoder.encode(items) else { return }
+
+        do {
+            try session.updateApplicationContext(["items": data])
+        } catch {
+            // ignore transient connectivity errors
+        }
+
+        session.transferUserInfo(["items": data])
+#endif
+    }
 
     private func migrateLegacyStorageIfNeeded(sharedDefaults: UserDefaults?) {
         guard let sharedDefaults else { return }
