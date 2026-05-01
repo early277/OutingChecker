@@ -24,8 +24,21 @@ struct OutingProvider: TimelineProvider {
         let now = Date()
         let items = store.currentItemsApplyingResetIfNeeded(now: now)
         let entry = OutingEntry(date: now, items: items)
-        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 15, to: now) ?? now.addingTimeInterval(900)
+        let nextRefresh = nextQuarterHourRefresh(after: now)
         completion(Timeline(entries: [entry], policy: .after(nextRefresh)))
+    }
+
+    private func nextQuarterHourRefresh(after now: Date) -> Date {
+        let calendar = Calendar.current
+        let minuteMarks = [1, 16, 31, 46]
+        let candidates = minuteMarks.compactMap { minute in
+            calendar.nextDate(
+                after: now,
+                matching: DateComponents(minute: minute, second: 0),
+                matchingPolicy: .nextTime
+            )
+        }
+        return candidates.min() ?? now.addingTimeInterval(900)
     }
 }
 
@@ -345,6 +358,7 @@ private struct LockScreenPendingTwoColumnView: View {
             entry: entry,
             fontSize: 10,
             emptyHeight: 10,
+            rowSpacing: 2,
             destinationURL: URL(string: "outingchecker://open")
         )
     }
@@ -356,8 +370,9 @@ private struct WatchPendingTwoColumnView: View {
     var body: some View {
         PendingTwoColumnGridView(
             entry: entry,
-            fontSize: 9,
+            fontSize: 10,
             emptyHeight: 9,
+            rowSpacing: 1,
             destinationURL: URL(string: "outingchecker://watch/checklist")
         )
     }
@@ -367,6 +382,7 @@ private struct PendingTwoColumnGridView: View {
     let entry: OutingEntry
     let fontSize: CGFloat
     let emptyHeight: CGFloat
+    let rowSpacing: CGFloat
     let destinationURL: URL?
 
     private var pendingItems: [ChecklistItem] {
@@ -381,7 +397,7 @@ private struct PendingTwoColumnGridView: View {
         let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 2)
         let arranged = WidgetLayout.columnMajorItems(pendingItems, columns: 2, rows: 4)
 
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 2) {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: rowSpacing) {
             ForEach(Array(arranged.enumerated()), id: \.offset) { _, slot in
                 if let item = slot {
                     LockScreenItemRowView(item: item, fontSize: fontSize)

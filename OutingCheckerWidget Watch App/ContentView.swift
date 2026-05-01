@@ -4,6 +4,15 @@ import Foundation
 import WatchConnectivity
 import Combine
 
+private enum WatchL10n {
+    static func text(_ ja: String, _ en: String, _ ko: String) -> String {
+        let code = Locale.preferredLanguages.first?.lowercased() ?? "ja"
+        if code.hasPrefix("ko") { return ko }
+        if code.hasPrefix("en") { return en }
+        return ja
+    }
+}
+
 private enum WatchStorage {
     static let appGroupID = "group.com.gmail.abyosida.OutingChecker"
     static let itemsKey = "outingChecker.items"
@@ -25,21 +34,6 @@ private struct WatchChecklistItem: Identifiable, Codable {
         case isOn
         case sortOrder
     }
-
-    init(id: UUID = UUID(), title: String, isOn: Bool = false, sortOrder: Int = 0) {
-        self.id = id
-        self.title = title
-        self.isOn = isOn
-        self.sortOrder = sortOrder
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
-        title = try container.decode(String.self, forKey: .title)
-        isOn = try container.decodeIfPresent(Bool.self, forKey: .isOn) ?? false
-        sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
-    }
 }
 
 struct ContentView: View {
@@ -60,7 +54,7 @@ struct ContentView: View {
     var body: some View {
         List {
             if visibleWatchItems.isEmpty {
-                Text("すべて達成")
+                Text(WatchL10n.text("すべて達成", "All completed", "모두 완료"))
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(visibleWatchItems) { item in
@@ -79,17 +73,15 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Watchチェック")
+        .navigationTitle(WatchL10n.text("リスト", "List", "목록"))
         .onAppear {
             reload()
             syncManager.requestLatestItems()
-            refreshVisibleItems()
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
                 reload()
                 syncManager.requestLatestItems()
-                refreshVisibleItems()
             }
         }
         .onReceive(syncManager.$latestItemsData) { data in
@@ -104,6 +96,7 @@ struct ContentView: View {
             return
         }
         items = decoded
+        refreshVisibleItems(resetSnapshot: true)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -111,18 +104,17 @@ struct ContentView: View {
         guard let decoded = try? decoder.decode([WatchChecklistItem].self, from: data) else {
             return
         }
+        if let encoded = try? encoder.encode(decoded) {
+            WatchStorage.defaults.set(encoded, forKey: WatchStorage.itemsKey)
+        }
         items = decoded
-        WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
-        refreshVisibleItems()
+        refreshVisibleItems(resetSnapshot: false)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func toggleItem(_ item: WatchChecklistItem) {
         var latest = items
-        guard let index = latest.firstIndex(where: { $0.id == item.id }) else {
-            return
-        }
-
+        guard let index = latest.firstIndex(where: { $0.id == item.id }) else { return }
         latest[index].isOn.toggle()
         latest.sort { $0.sortOrder < $1.sortOrder }
 
@@ -130,13 +122,17 @@ struct ContentView: View {
             WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
             syncManager.sendUpdatedItems(data)
         }
-
         items = latest
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func refreshVisibleItems() {
-        visibleItemIDs = Set(items.filter { !$0.isOn }.map(\.id))
+    private func refreshVisibleItems(resetSnapshot: Bool) {
+        let pendingIDs = Set(items.filter { !$0.isOn }.map(\.id))
+        if resetSnapshot {
+            visibleItemIDs = pendingIDs
+        } else {
+            visibleItemIDs.formUnion(pendingIDs)
+        }
     }
 }
 
