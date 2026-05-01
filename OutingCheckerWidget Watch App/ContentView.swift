@@ -19,6 +19,22 @@ private struct ChecklistItem: Identifiable, Codable {
     var title: String
     var isOn: Bool
     var sortOrder: Int
+    var autoResetRule: ResetRule?
+    var lastAutoResetTriggerDate: Date?
+}
+
+private enum ResetRule: Codable {
+    case daily(hour: Int, minute: Int)
+    case dailyHours(hours: [Int])
+    case weekday(weekday: Int, hour: Int, minute: Int)
+    case weekdays(weekdays: [Int], hour: Int, minute: Int)
+    case weekdaysHours(weekdays: [Int], hours: [Int])
+    case nthWeekday(ordinal: Int, weekday: Int, hour: Int, minute: Int)
+    case nthWeekdays(ordinals: [Int], weekdays: [Int], hour: Int, minute: Int)
+    case nthWeekdaysHours(ordinals: [Int], weekdays: [Int], hours: [Int])
+    case nthWeekdayPreviousDay(ordinal: Int, weekday: Int, hour: Int, minute: Int)
+    case nthWeekdaysPreviousDay(ordinals: [Int], weekdays: [Int], hour: Int, minute: Int)
+    case nthWeekdaysHoursPreviousDay(ordinals: [Int], weekdays: [Int], hours: [Int])
 }
 
 private struct ChecklistStore {
@@ -42,7 +58,33 @@ private struct ChecklistStore {
 
     @discardableResult
     func applyResetIfNeeded(items: inout [ChecklistItem]) -> Bool {
-        false
+        let now = Date()
+        let calendar = Calendar.current
+        var changed = false
+
+        for index in items.indices {
+            guard let rule = items[index].autoResetRule,
+                  let trigger = ResetCalculator.latestTriggerDate(beforeOrAt: now, rule: rule, calendar: calendar) else {
+                continue
+            }
+
+            if let last = items[index].lastAutoResetTriggerDate,
+               calendar.compare(last, to: trigger, toGranularity: .minute) != .orderedAscending {
+                continue
+            }
+
+            if items[index].isOn {
+                items[index].isOn = false
+                changed = true
+            }
+            items[index].lastAutoResetTriggerDate = trigger
+            changed = true
+        }
+
+        if changed {
+            saveItems(items)
+        }
+        return changed
     }
 
     func toggleItem(id: UUID) -> [ChecklistItem] {
@@ -51,6 +93,96 @@ private struct ChecklistStore {
         items[index].isOn.toggle()
         saveItems(items)
         return items
+    }
+}
+
+private enum ResetCalculator {
+    static func latestTriggerDate(beforeOrAt now: Date, rule: ResetRule, calendar: Calendar) -> Date? {
+        switch rule {
+        case let .daily(hour, minute):
+            return latestDailyTrigger(beforeOrAt: now, hour: hour, minute: minute, calendar: calendar)
+        case let .dailyHours(hours):
+            return hours.compactMap { latestDailyTrigger(beforeOrAt: now, hour: $0, minute: 0, calendar: calendar) }.max()
+        case let .weekday(weekday, hour, minute):
+            return latestWeekdayTrigger(beforeOrAt: now, weekday: weekday, hour: hour, minute: minute, calendar: calendar)
+        case let .weekdays(weekdays, hour, minute):
+            return weekdays.compactMap { latestWeekdayTrigger(beforeOrAt: now, weekday: $0, hour: hour, minute: minute, calendar: calendar) }.max()
+        case let .weekdaysHours(weekdays, hours):
+            var candidates: [Date] = []
+            for weekday in weekdays { for hour in hours {
+                if let c = latestWeekdayTrigger(beforeOrAt: now, weekday: weekday, hour: hour, minute: 0, calendar: calendar) { candidates.append(c) }
+            }}
+            return candidates.max()
+        case let .nthWeekday(ordinal, weekday, hour, minute):
+            return latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, dayOffset: 0, calendar: calendar)
+        case let .nthWeekdays(ordinals, weekdays, hour, minute):
+            var candidates: [Date] = []
+            for o in ordinals { for w in weekdays {
+                if let c = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: o, weekday: w, hour: hour, minute: minute, dayOffset: 0, calendar: calendar) { candidates.append(c) }
+            }}
+            return candidates.max()
+        case let .nthWeekdaysHours(ordinals, weekdays, hours):
+            var candidates: [Date] = []
+            for o in ordinals { for w in weekdays { for h in hours {
+                if let c = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: o, weekday: w, hour: h, minute: 0, dayOffset: 0, calendar: calendar) { candidates.append(c) }
+            }}}
+            return candidates.max()
+        case let .nthWeekdayPreviousDay(ordinal, weekday, hour, minute):
+            return latestNthWeekdayTrigger(beforeOrAt: now, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, dayOffset: -1, calendar: calendar)
+        case let .nthWeekdaysPreviousDay(ordinals, weekdays, hour, minute):
+            var candidates: [Date] = []
+            for o in ordinals { for w in weekdays {
+                if let c = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: o, weekday: w, hour: hour, minute: minute, dayOffset: -1, calendar: calendar) { candidates.append(c) }
+            }}
+            return candidates.max()
+        case let .nthWeekdaysHoursPreviousDay(ordinals, weekdays, hours):
+            var candidates: [Date] = []
+            for o in ordinals { for w in weekdays { for h in hours {
+                if let c = latestNthWeekdayTrigger(beforeOrAt: now, ordinal: o, weekday: w, hour: h, minute: 0, dayOffset: -1, calendar: calendar) { candidates.append(c) }
+            }}}
+            return candidates.max()
+        }
+    }
+
+    private static func latestDailyTrigger(beforeOrAt now: Date, hour: Int, minute: Int, calendar: Calendar) -> Date? {
+        let today = calendar.startOfDay(for: now)
+        guard let candidate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: today) else { return nil }
+        return candidate <= now ? candidate : calendar.date(byAdding: .day, value: -1, to: candidate)
+    }
+
+    private static func latestWeekdayTrigger(beforeOrAt now: Date, weekday: Int, hour: Int, minute: Int, calendar: Calendar) -> Date? {
+        for offset in 0..<14 {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: now) else { continue }
+            let start = calendar.startOfDay(for: day)
+            guard calendar.component(.weekday, from: start) == weekday,
+                  let candidate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: start),
+                  candidate <= now else { continue }
+            return candidate
+        }
+        return nil
+    }
+
+    private static func latestNthWeekdayTrigger(beforeOrAt now: Date, ordinal: Int, weekday: Int, hour: Int, minute: Int, dayOffset: Int, calendar: Calendar) -> Date? {
+        for monthOffset in 0..<24 {
+            guard let month = calendar.date(byAdding: .month, value: -monthOffset, to: now),
+                  let candidate = nthWeekdayDate(inSameMonthAs: month, ordinal: ordinal, weekday: weekday, hour: hour, minute: minute, dayOffset: dayOffset, calendar: calendar) else { continue }
+            if candidate <= now { return candidate }
+        }
+        return nil
+    }
+
+    private static func nthWeekdayDate(inSameMonthAs date: Date, ordinal: Int, weekday: Int, hour: Int, minute: Int, dayOffset: Int, calendar: Calendar) -> Date? {
+        let comps = calendar.dateComponents([.year, .month], from: date)
+        guard let monthStart = calendar.date(from: comps),
+              let range = calendar.range(of: .day, in: .month, for: monthStart) else { return nil }
+        var matches: [Date] = []
+        for day in range {
+            guard let current = calendar.date(byAdding: .day, value: day - 1, to: monthStart) else { continue }
+            if calendar.component(.weekday, from: current) == weekday { matches.append(current) }
+        }
+        guard ordinal >= 1, ordinal <= matches.count,
+              let adjusted = calendar.date(byAdding: .day, value: dayOffset, to: matches[ordinal - 1]) else { return nil }
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: adjusted)
     }
 }
 
