@@ -68,13 +68,11 @@ struct ContentView: View {
         .onAppear {
             reload()
             syncManager.requestLatestItems()
-            refreshVisibleItems()
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
                 reload()
                 syncManager.requestLatestItems()
-                refreshVisibleItems()
             }
         }
         .onReceive(syncManager.$latestItemsData) { data in
@@ -89,7 +87,7 @@ struct ContentView: View {
             return
         }
         items = decoded
-        refreshVisibleItems()
+        refreshVisibleItems(resetSnapshot: true)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -101,7 +99,7 @@ struct ContentView: View {
             WatchStorage.defaults.set(encoded, forKey: WatchStorage.itemsKey)
         }
         items = decoded
-        refreshVisibleItems()
+        refreshVisibleItems(resetSnapshot: false)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -116,12 +114,16 @@ struct ContentView: View {
             syncManager.sendUpdatedItems(data)
         }
         items = latest
-        refreshVisibleItems()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func refreshVisibleItems() {
-        visibleItemIDs = Set(items.filter { !$0.isOn }.map(\.id))
+    private func refreshVisibleItems(resetSnapshot: Bool) {
+        let pendingIDs = Set(items.filter { !$0.isOn }.map(\.id))
+        if resetSnapshot {
+            visibleItemIDs = pendingIDs
+        } else {
+            visibleItemIDs.formUnion(pendingIDs)
+        }
     }
 }
 
