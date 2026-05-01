@@ -13,39 +13,17 @@ private enum WatchL10n {
     }
 }
 
-private enum WatchStorage {
-    static let appGroupID = "group.com.gmail.abyosida.OutingChecker"
-    static let itemsKey = "outingChecker.items"
-
-    static var defaults: UserDefaults {
-        UserDefaults(suiteName: appGroupID) ?? .standard
-    }
-}
-
-private struct WatchChecklistItem: Identifiable, Codable {
-    let id: UUID
-    var title: String
-    var isOn: Bool
-    var sortOrder: Int
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case title
-        case isOn
-        case sortOrder
-    }
-}
-
 struct ContentView: View {
-    @State private var items: [WatchChecklistItem] = []
+    @State private var items: [ChecklistItem] = []
     @State private var visibleItemIDs: Set<UUID> = []
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var syncManager = WatchSyncManager()
+    private let store = ChecklistStore()
 
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
 
-    private var visibleWatchItems: [WatchChecklistItem] {
+    private var visibleWatchItems: [ChecklistItem] {
         items
             .sorted { $0.sortOrder < $1.sortOrder }
             .filter { visibleItemIDs.contains($0.id) }
@@ -91,35 +69,33 @@ struct ContentView: View {
     }
 
     private func reload() {
-        guard let data = WatchStorage.defaults.data(forKey: WatchStorage.itemsKey),
-              let decoded = try? decoder.decode([WatchChecklistItem].self, from: data) else {
-            return
+        items = store.currentItemsApplyingResetIfNeeded()
+        if let data = try? encoder.encode(items) {
+            syncManager.sendUpdatedItems(data)
         }
-        items = decoded
         refreshVisibleItems(resetSnapshot: true)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func applyIncomingItemsData(_ data: Data) {
-        guard let decoded = try? decoder.decode([WatchChecklistItem].self, from: data) else {
+        guard var decoded = try? decoder.decode([ChecklistItem].self, from: data) else {
             return
         }
-        if let encoded = try? encoder.encode(decoded) {
-            WatchStorage.defaults.set(encoded, forKey: WatchStorage.itemsKey)
+
+        let didApplyReset = store.applyResetIfNeeded(items: &decoded)
+        store.saveItems(decoded)
+
+        if didApplyReset, let encoded = try? encoder.encode(decoded) {
+            syncManager.sendUpdatedItems(encoded)
         }
         items = decoded
         refreshVisibleItems(resetSnapshot: false)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func toggleItem(_ item: WatchChecklistItem) {
-        var latest = items
-        guard let index = latest.firstIndex(where: { $0.id == item.id }) else { return }
-        latest[index].isOn.toggle()
-        latest.sort { $0.sortOrder < $1.sortOrder }
-
+    private func toggleItem(_ item: ChecklistItem) {
+        let latest = store.toggleItem(id: item.id)
         if let data = try? encoder.encode(latest) {
-            WatchStorage.defaults.set(data, forKey: WatchStorage.itemsKey)
             syncManager.sendUpdatedItems(data)
         }
         items = latest
