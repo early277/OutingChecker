@@ -4,6 +4,56 @@ import Foundation
 import WatchConnectivity
 import Combine
 
+
+private enum WatchStorage {
+    static let appGroupID = "group.com.gmail.abyosida.OutingChecker"
+    static let itemsKey = "outingChecker.items"
+
+    static var defaults: UserDefaults {
+        UserDefaults(suiteName: appGroupID) ?? .standard
+    }
+}
+
+private struct ChecklistItem: Identifiable, Codable {
+    let id: UUID
+    var title: String
+    var isOn: Bool
+    var sortOrder: Int
+}
+
+private struct ChecklistStore {
+    private let defaults = WatchStorage.defaults
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
+
+    func loadItems() -> [ChecklistItem] {
+        guard let data = defaults.data(forKey: WatchStorage.itemsKey),
+              let decoded = try? decoder.decode([ChecklistItem].self, from: data) else {
+            return []
+        }
+        return decoded.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    func saveItems(_ items: [ChecklistItem]) {
+        if let data = try? encoder.encode(items.sorted(by: { $0.sortOrder < $1.sortOrder })) {
+            defaults.set(data, forKey: WatchStorage.itemsKey)
+        }
+    }
+
+    @discardableResult
+    func applyResetIfNeeded(items: inout [ChecklistItem]) -> Bool {
+        false
+    }
+
+    func toggleItem(id: UUID) -> [ChecklistItem] {
+        var items = loadItems()
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return items }
+        items[index].isOn.toggle()
+        saveItems(items)
+        return items
+    }
+}
+
 private enum WatchL10n {
     static func text(_ ja: String, _ en: String, _ ko: String) -> String {
         let code = Locale.preferredLanguages.first?.lowercased() ?? "ja"
