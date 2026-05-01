@@ -4,6 +4,15 @@ import Foundation
 import WatchConnectivity
 import Combine
 
+private enum WatchL10n {
+    static func text(_ ja: String, _ en: String, _ ko: String) -> String {
+        let code = Locale.preferredLanguages.first?.lowercased() ?? "ja"
+        if code.hasPrefix("ko") { return ko }
+        if code.hasPrefix("en") { return en }
+        return ja
+    }
+}
+
 private enum WatchStorage {
     static let appGroupID = "group.com.gmail.abyosida.OutingChecker"
     static let itemsKey = "outingChecker.items"
@@ -45,7 +54,7 @@ struct ContentView: View {
     var body: some View {
         List {
             if visibleWatchItems.isEmpty {
-                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
+                Text(WatchL10n.text("すべて達成", "All completed", "모두 완료"))
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(visibleWatchItems) { item in
@@ -64,7 +73,7 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle(L10n.text("リスト", "List", "목록"))
+        .navigationTitle(WatchL10n.text("リスト", "List", "목록"))
         .onAppear {
             reload()
             syncManager.requestLatestItems()
