@@ -45,7 +45,7 @@ struct ContentView: View {
     var body: some View {
         List {
             if visibleWatchItems.isEmpty {
-                Text("すべて達成")
+                Text(L10n.text("すべて達成", "All completed", "모두 완료"))
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(visibleWatchItems) { item in
@@ -64,7 +64,7 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("リスト")
+        .navigationTitle(L10n.text("リスト", "List", "목록"))
         .onAppear {
             reload()
             syncManager.requestLatestItems()
