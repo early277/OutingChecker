@@ -69,10 +69,14 @@ struct ContentView: View {
     }
 
     private func reload() {
-        items = store.currentItemsApplyingResetIfNeeded()
-        if let data = try? encoder.encode(items) {
+        var latestItems = store.loadItems()
+        let didApplyReset = store.applyResetIfNeeded(items: &latestItems)
+
+        if didApplyReset, let data = try? encoder.encode(latestItems) {
             syncManager.sendUpdatedItems(data)
         }
+
+        items = latestItems
         refreshVisibleItems(resetSnapshot: true)
         WidgetCenter.shared.reloadAllTimelines()
     }
