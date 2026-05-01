@@ -64,7 +64,7 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Watchチェック")
+        .navigationTitle("リスト")
         .onAppear {
             reload()
             syncManager.requestLatestItems()
